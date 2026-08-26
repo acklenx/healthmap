@@ -1,0 +1,39 @@
+# Cloudflare Pages project for the Score app.
+#
+# Static assets live in public/; the API routes in functions/ are deployed as
+# Pages Functions automatically. Everything here fits inside the free plan.
+#
+#   npx wrangler pages deploy            (run from this directory)
+
+name = "score"
+pages_build_output_dir = "public"
+compatibility_date = "2026-01-01"
+
+# D1 holds push subscriptions and queued alerts. Nothing else is stored
+# server-side -- the inspection data itself ships as a static file.
+#
+# Commented out because push alerts are opt-in and the app degrades cleanly
+# without them: /api/subscribe, /api/notify and /api/pending all check for the
+# binding and return 503 when it is absent. A deploy carrying a placeholder
+# database_id is rejected, so this stays off until the database really exists.
+#
+# To turn alerts on:
+#   npx wrangler d1 create score
+#   npx wrangler d1 execute score --remote --file=schema.sql
+# then uncomment the block below and paste in the returned id.
+#
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "score"
+# database_id = ""
+
+[vars]
+# Contact address for the push service, required by RFC 8292. Only read when
+# alerts are enabled; set it to a real mailbox before turning them on.
+VAPID_SUBJECT = "mailto:you@example.com"
+# VAPID_PUBLIC_KEY is a plain var; set it with:
+#   npx wrangler pages secret put VAPID_PUBLIC_KEY   (or as a plaintext var)
+#
+# Secrets -- set these with `npx wrangler pages secret put <NAME>`:
+#   VAPID_PRIVATE_KEY   base64url PKCS#8 EC P-256 key from scripts/gen_vapid.mjs
+#   NOTIFY_SECRET       shared secret the nightly crawler uses to call /api/notify

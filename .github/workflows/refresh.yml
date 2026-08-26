@@ -1,0 +1,106 @@
+# Nightly refresh of the inspection data.
+#
+# The crawler runs here rather than on Cloudflare because a full crawl is a
+# couple of thousand page fetches, which does not fit inside a Worker's
+# subrequest budget. GitHub Actions does it for free, commits the result, and
+# pushes the static payload to Cloudflare Pages.
+#
+# Required repository secrets:
+#   CLOUDFLARE_API_TOKEN    token with "Cloudflare Pages: Edit" permission
+#   CLOUDFLARE_ACCOUNT_ID   your account id
+#   NOTIFY_SECRET           same value set on the Pages project (optional;
+#                           only needed if push alerts are enabled)
+#   APP_ORIGIN              https://healthmap.acklenx.com (optional, for alerts)
+
+name: Refresh inspection data
+
+on:
+  schedule:
+    # Nightly incremental — cheap, catches anything posted that day.
+    - cron: "20 8 * * *"
+    # Weekly full crawl — picks up corrections, closures and re-permits.
+    - cron: "50 9 * * 0"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Run a full crawl instead of an incremental one"
+        type: boolean
+        default: false
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The crawler is deliberately stdlib-only, so there is nothing to install.
+
+      - name: Choose crawl mode
+        id: mode
+        run: |
+          if [ "${{ github.event.inputs.full }}" = "true" ] || [ "${{ github.event.schedule }}" = "50 9 * * 0" ]; then
+            echo "args=--full" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=--since-days 45" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Crawl
+        run: python3 crawler/crawl.py ${{ steps.mode.outputs.args }} --workers 3
+
+      # A scrape fails quietly: upstream markup changes and the payload comes
+      # back empty while everything still "succeeds". Fail the run instead of
+      # deploying a broken dataset over a good one.
+      - name: Verify the payload
+        run: python3 scripts/verify_data.py
+
+      - name: Commit data
+        run: |
+          git config user.name "score-bot"
+          git config user.email "score-bot@users.noreply.github.com"
+          git add data/ web/public/places.json web/public/version.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "data: refresh $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: web
+        run: npx --yes wrangler@latest pages deploy --project-name score --commit-dirty=true
+
+      # Tell the app about new scores so it can alert anyone who saved that
+      # restaurant. Skipped silently when alerts aren't configured.
+      - name: Send alerts
+        env:
+          NOTIFY_SECRET: ${{ secrets.NOTIFY_SECRET }}
+          APP_ORIGIN: ${{ secrets.APP_ORIGIN }}
+        run: |
+          if [ -z "$NOTIFY_SECRET" ] || [ -z "$APP_ORIGIN" ]; then
+            echo "Alerts not configured; skipping."
+            exit 0
+          fi
+          COUNT=$(python3 -c "import json;print(len(json.load(open('data/changes.json'))['changes']))")
+          echo "$COUNT new inspections"
+          if [ "$COUNT" != "0" ]; then
+            python3 -c "import json;print(json.dumps({'changes':json.load(open('data/changes.json'))['changes']}))" > /tmp/notify.json
+            curl -sS -X POST "$APP_ORIGIN/api/notify" \
+              -H "Authorization: Bearer $NOTIFY_SECRET" \
+              -H "Content-Type: application/json" \
+              --data @/tmp/notify.json
+          fi

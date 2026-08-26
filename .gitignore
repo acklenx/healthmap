@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.tmp
+node_modules/
+.wrangler/
+
+# Claude Code session logs and hooks (local tooling, not part of the app)
+.claude/
