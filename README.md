@@ -36,10 +36,14 @@ places are almost certainly in it; the rest arrive outwards while you read, and
 everything re-sorts as they land. There is no "search server" and no database:
 distance sorting happens on the device, instantly, offline.
 
-Sharding is as much about the repository as the wire. A single payload file was
-rewritten in full on every run, so git stored a fresh copy of all of it whether
-or not one score had moved. Per county, only the counties that actually changed
-get written — and at 0–40 new inspections a run, that is a handful.
+Sharding also makes a run's commit a delta rather than a rewrite, though less
+dramatically than it first appears: a real run rewrote **all three** county
+shards and 26 of 91 history shards. Counties are coarse enough that any
+inspection anywhere in one dirties the whole file, so at statewide scale most
+populated counties will change every week regardless. The history shards are
+where the saving is, and the bigger win is that `data/store.json` — 5.8 MB
+rewritten in full every run, whether or not anything moved — does not exist any
+more.
 
 Coverage stops at 20 miles once there are enough places to be useful. Beyond
 that the shards are bytes nobody reads, and the manifest means anything further

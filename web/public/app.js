@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "19f6b0b0", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "85251db0", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -880,11 +880,19 @@ function coverageHTML(m) {
       <div class="stat"><b>${places}</b><small>Places</small></div>
       <div class="stat"><b>${m.inspections.toLocaleString()}</b><small>Inspections</small></div>
       <div class="stat"><b>${relativeTime(m.generated)}</b><small>Last refreshed</small></div>`,
+    // One cell per county rather than a bar. Three of 159 is 2%, which on a
+    // 343px track is a six-pixel sliver -- present, and impossible to read as
+    // anything. Cells show the scale of what is missing, which is the point,
+    // and they fill in one at a time when a statewide crawl runs.
     progress: `<div class="cover-bar">
-        <span class="cover-track"><span class="cover-fill" style="width:${pct.toFixed(1)}%"></span></span>
-        <p class="cover-note">${pct.toFixed(0)}% of Georgia's counties.
-          ${m.all_counties - covered} to go — a statewide crawl is one
-          <code>--counties all</code> away.</p>
+        <div class="cover-cells" role="img"
+             aria-label="${covered} of ${m.all_counties} Georgia counties crawled">${
+          Array.from({ length: m.all_counties }, (_, i) =>
+            `<i${i < covered ? ' data-on=""' : ""}></i>`).join("")
+        }</div>
+        <p class="cover-note"><b>${covered}</b> of ${m.all_counties} counties —
+          ${pct < 1 ? "under 1" : pct.toFixed(0)}% of Georgia.
+          ${m.all_counties - covered} to go.</p>
       </div>`,
     table: `<thead><tr><th scope="col">County</th><th scope="col">Places</th>
               <th scope="col">Inspections</th><th scope="col">ZIPs</th></tr></thead>
