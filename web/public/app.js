@@ -18,6 +18,12 @@ const POSITION_MAX_AGE = 10 * 60 * 1000;     // reuse a fix this fresh, silently
 const PAGE = 40;                              // rows appended per scroll batch
 const MAX_PINS = 280;                         // pins drawn at once (see syncPins)
 
+/* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
+ * changes together: editing a line of CSS should not re-download 192 KB of
+ * Leaflet that has not moved since it was vendored. */
+const CACHE_ID = { app: "ac3bf833", vendor: "ff4e6fa7", icons: "2290448a" };
+const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
+
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const TILE_ATTR =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -537,7 +543,7 @@ function applyShareState() {
 /* ---- share -------------------------------------------------------------- */
 
 let qrLib = null;
-const loadQr = () => (qrLib ||= import("/qr.js"));
+const loadQr = () => (qrLib ||= import(bust("/qr.js", "app")));
 
 async function openShareSheet() {
   const url = shareUrl();
@@ -864,11 +870,11 @@ function loadLeaflet() {
   leafletLoading = new Promise((resolve, reject) => {
     const css = document.createElement("link");
     css.rel = "stylesheet";
-    css.href = "/vendor/leaflet/leaflet.css";
+    css.href = bust("/vendor/leaflet/leaflet.css", "vendor");
     document.head.append(css);
 
     const js = document.createElement("script");
-    js.src = "/vendor/leaflet/leaflet.js";
+    js.src = bust("/vendor/leaflet/leaflet.js", "vendor");
     js.addEventListener("load", () => resolve(window.L));
     js.addEventListener("error", () => {
       leafletLoading = null;                       // let a later attempt retry

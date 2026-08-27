@@ -47,8 +47,34 @@ a *past* inspection never changes at all. The caching is aggressive to match:
 | `places.json?v=<stamp>` | cached forever by the service worker | the URL only changes when the crawler publishes new data |
 | `version.json` | never cached, checked at most every 6h | a few bytes; the freshness probe |
 | `/api/report` | `max-age=1y, immutable`, edge + service worker | a completed inspection is a historical fact |
+| `*?cache-id=<hash>` | `immutable`, a year | a stamped URL's bytes never change |
 | app shell | cache-first, refreshed in background | instant launch, works offline |
 | map tiles | cache-first, capped at 900 | a tile is a picture of a place, and places don't move |
+
+**Assets are stamped by content, in groups.** `scripts/stamp_assets.py` hashes
+each group and rewrites every reference to it as `?cache-id=<hash>`:
+
+| Bucket | Files | Size | Changes |
+|---|---|---|---|
+| `app` | `app.js`, `styles.css`, `qr.js` | ~118 KB | most commits |
+| `vendor` | Leaflet, its CSS and images | ~165 KB | when Leaflet does |
+| `icons` | the app icons | ~12 KB | ~never |
+
+One id for everything would be simpler and would re-download Leaflet — vendored
+at 1.9.4 and untouched since — every time a line of CSS moved. Separate ids mean
+an edit to the app costs 118 KB rather than 295 KB.
+
+They are hashes rather than numbers you set, because a number is a thing you can
+forget to change, and that failure is silent: the files change, the URLs don't,
+and every warm cache keeps serving the old app. `stamp_assets.py --check` runs in
+CI so a stale stamp fails the push instead.
+
+`index.html`, `sw.js` and `version.json` are deliberately unstamped — something
+has to be fetched by a stable URL for the rest to be discovered — so those are
+served `no-cache` via `web/public/_headers`. That file exists because Cloudflare
+Pages defaults every static asset to `max-age=14400`, and four hours of that on
+`sw.js` is four hours in which a release cannot reach a device that already has
+the app open.
 
 Opening the app costs one small `version.json` request on a cold start, and
 nothing at all if it was checked recently.

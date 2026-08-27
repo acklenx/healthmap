@@ -1,15 +1,16 @@
 # Cache policy at the edge.
 #
-# Cloudflare Pages defaults every static file to max-age=14400. For a service
-# worker that is a four-hour window in which the browser is entitled to keep
-# using the old one -- so a release ships, the files are correct on the server,
-# and nothing changes on the device. The shell assets have the same problem one
-# level down: the worker's install step fetches them, and an HTTP cache hit
-# there bakes the previous release into the new shell cache.
+# Two kinds of file here, and they want opposite things.
 #
-# So the app shell revalidates every time. It is a handful of small conditional
-# requests that mostly come back 304, and the service worker is what actually
-# makes the app work offline -- the HTTP cache was never doing that job.
+# Stamped assets carry ?cache-id=<content hash> (see scripts/stamp_assets.py),
+# so a given URL's bytes never change and it can be cached about as hard as it
+# is possible to cache something. A release mints new URLs.
+#
+# Entry points cannot be stamped -- something has to be fetched by a stable URL
+# for the rest to be discovered at all -- so those revalidate every time. It is
+# a few small conditional requests that mostly come back 304, and the service
+# worker is what actually makes this app work offline. The HTTP cache was never
+# doing that job; on sw.js it was actively delaying releases.
 
 /sw.js
   Cache-Control: no-cache
@@ -17,30 +18,30 @@
 /index.html
   Cache-Control: no-cache
 
-/app.js
-  Cache-Control: no-cache
-
-/qr.js
-  Cache-Control: no-cache
-
-/styles.css
+/version.json
   Cache-Control: no-cache
 
 /manifest.webmanifest
   Cache-Control: no-cache
 
-# The freshness probe. Caching this defeats the entire scheme.
-/version.json
-  Cache-Control: no-cache
+# Stamped by scripts/stamp_assets.py. Safe to keep forever: the id changes with
+# the contents, so a stale copy is a copy of a URL nobody asks for any more.
+/app.js
+  Cache-Control: public, max-age=31536000, immutable
 
-# The dataset is requested as places.json?v=<stamp>, so a given URL's contents
-# never change. Same for vendored Leaflet and the icons, which change only when
-# the shell version does and are revalidated by it.
-/places.json
+/styles.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/qr.js
   Cache-Control: public, max-age=31536000, immutable
 
 /vendor/*
-  Cache-Control: public, max-age=604800
+  Cache-Control: public, max-age=31536000, immutable
 
 /icons/*
-  Cache-Control: public, max-age=604800
+  Cache-Control: public, max-age=31536000, immutable
+
+# Requested as places.json?v=<generated>, stamped by the crawler rather than by
+# stamp_assets.py -- it changes on a different schedule to the app.
+/places.json
+  Cache-Control: public, max-age=31536000, immutable

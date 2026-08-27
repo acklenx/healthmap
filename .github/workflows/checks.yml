@@ -1,0 +1,38 @@
+# Things that should be true of every push.
+#
+# The cache stamps are content hashes, so they cannot be forgotten in the sense
+# of picking the wrong number -- but they can be forgotten in the sense of not
+# running the script. That failure is silent and lands in production: the assets
+# change, the URLs do not, and every device with a warm cache keeps the old app
+# until something evicts it. Cheaper to fail here.
+
+name: Checks
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", "scripts/**", "crawler/**"]
+  pull_request:
+    paths: ["web/**", "scripts/**", "crawler/**"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Cache stamps are current
+        run: python3 scripts/stamp_assets.py --check
+
+      - name: JavaScript parses
+        run: |
+          for f in web/public/app.js web/public/sw.js web/public/qr.js; do
+            node --check "$f" || exit 1
+          done
+          for f in web/functions/api/*.js; do
+            node --check "$f" || exit 1
+          done
+          echo "All JavaScript parses."

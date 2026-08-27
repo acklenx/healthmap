@@ -16,7 +16,7 @@
  * few bytes, and caching it would defeat the entire scheme.
  */
 
-const SHELL_VERSION = "v6";
+const SHELL_VERSION = "ac3bf833";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const REPORTS = "reports-v1";
@@ -28,20 +28,20 @@ const TILE_LIMIT = 900;      // roughly a couple of towns' worth, at a few kB ea
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css",
-  "/app.js",
+  "/styles.css?cache-id=ac3bf833",
+  "/app.js?cache-id=ac3bf833",
   // Loaded on demand when something is shared, precached for the same reason
   // Leaflet is: the moment you want it is not a good moment to need the network.
-  "/qr.js",
-  "/manifest.webmanifest",
+  "/qr.js?cache-id=ac3bf833",
+  "/manifest.webmanifest?cache-id=ac3bf833",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least
   // likely to have signal to spare.
-  "/vendor/leaflet/leaflet.js",
-  "/vendor/leaflet/leaflet.css",
-  "/icons/icon.svg",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
+  "/vendor/leaflet/leaflet.js?cache-id=ff4e6fa7",
+  "/vendor/leaflet/leaflet.css?cache-id=ff4e6fa7",
+  "/icons/icon.svg?cache-id=2290448a",
+  "/icons/icon-192.png?cache-id=2290448a",
+  "/icons/icon-512.png?cache-id=2290448a",
 ];
 
 self.addEventListener("install", (event) => {
@@ -205,8 +205,8 @@ self.addEventListener("push", (event) => {
     if (!items.length) {
       await self.registration.showNotification("New inspection posted", {
         body: "Open Score to see the latest results.",
-        icon: "/icons/icon-192.png",
-        badge: "/icons/icon-192.png",
+        icon: "/icons/icon-192.png?cache-id=2290448a",
+        badge: "/icons/icon-192.png?cache-id=2290448a",
         tag: "inspection",
       });
       return;
@@ -217,8 +217,8 @@ self.addEventListener("push", (event) => {
         `${items.length} new inspection scores`,
         {
           body: items.map((i) => titleish(i.name)).join(", "),
-          icon: "/icons/icon-192.png",
-          badge: "/icons/icon-192.png",
+          icon: "/icons/icon-192.png?cache-id=2290448a",
+          badge: "/icons/icon-192.png?cache-id=2290448a",
           tag: "inspection-batch",
         }
       );
@@ -229,8 +229,8 @@ self.addEventListener("push", (event) => {
       const grade = i.score >= 90 ? "A" : i.score >= 80 ? "B" : i.score >= 70 ? "C" : "U";
       return self.registration.showNotification(titleish(i.name), {
         body: `Scored ${i.score} (grade ${grade}) on ${i.date}`,
-        icon: "/icons/icon-192.png",
-        badge: "/icons/icon-192.png",
+        icon: "/icons/icon-192.png?cache-id=2290448a",
+        badge: "/icons/icon-192.png?cache-id=2290448a",
         tag: `insp-${i.placeId}`,
         data: { placeId: i.placeId },
       });
