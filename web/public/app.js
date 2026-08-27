@@ -1853,5 +1853,13 @@ navigator.serviceWorker?.addEventListener("message", (e) => {
 });
 
 if ("serviceWorker" in navigator) {
-  addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+  addEventListener("load", async () => {
+    const reg = await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+    // Ask once, explicitly. The browser checks for a new worker on its own
+    // schedule, and a host that puts a long browser TTL on the script can
+    // stretch that out considerably -- which looks exactly like a deploy that
+    // never happened. updateViaCache: "none" keeps this check off the HTTP
+    // cache no matter what header the script arrived with.
+    reg.update?.().catch(() => {});
+  });
 }
