@@ -1,0 +1,46 @@
+# Cache policy at the edge.
+#
+# Cloudflare Pages defaults every static file to max-age=14400. For a service
+# worker that is a four-hour window in which the browser is entitled to keep
+# using the old one -- so a release ships, the files are correct on the server,
+# and nothing changes on the device. The shell assets have the same problem one
+# level down: the worker's install step fetches them, and an HTTP cache hit
+# there bakes the previous release into the new shell cache.
+#
+# So the app shell revalidates every time. It is a handful of small conditional
+# requests that mostly come back 304, and the service worker is what actually
+# makes the app work offline -- the HTTP cache was never doing that job.
+
+/sw.js
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/app.js
+  Cache-Control: no-cache
+
+/qr.js
+  Cache-Control: no-cache
+
+/styles.css
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# The freshness probe. Caching this defeats the entire scheme.
+/version.json
+  Cache-Control: no-cache
+
+# The dataset is requested as places.json?v=<stamp>, so a given URL's contents
+# never change. Same for vendored Leaflet and the icons, which change only when
+# the shell version does and are revalidated by it.
+/places.json
+  Cache-Control: public, max-age=31536000, immutable
+
+/vendor/*
+  Cache-Control: public, max-age=604800
+
+/icons/*
+  Cache-Control: public, max-age=604800

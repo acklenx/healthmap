@@ -16,7 +16,7 @@
  * few bytes, and caching it would defeat the entire scheme.
  */
 
-const SHELL_VERSION = "v5";
+const SHELL_VERSION = "v6";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const REPORTS = "reports-v1";
@@ -45,11 +45,18 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(SHELL)
-      .then((cache) => cache.addAll(SHELL_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(SHELL);
+    // `cache: "reload"` rather than cache.addAll(), which would fetch through
+    // the HTTP cache. A hit there installs the *previous* release's files into
+    // the new shell -- the version number changes, the assets do not, and the
+    // bug looks exactly like the deploy never happened.
+    await Promise.all(SHELL_ASSETS.map(async (url) => {
+      const response = await fetch(new Request(url, { cache: "reload" }));
+      if (response.ok) await cache.put(url, response);
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
