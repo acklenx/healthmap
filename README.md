@@ -16,7 +16,7 @@ There is no API, so this project drives its public search form.
 ```
 GitHub Actions (nightly)          Cloudflare Pages (free)
 ┌──────────────────────┐          ┌───────────────────────────┐
-│ crawler/crawl.py     │  deploy  │ public/    static app     │
+│ crawler/crawl.py     │  commit  │ public/    static app     │
 │  · scrape listings   │ ───────► │  places.json  the dataset │
 │  · geocode addresses │          │  vendor/      Leaflet     │
 │  · diff vs. last run │  notify  │ functions/ Pages Functions│
@@ -116,28 +116,36 @@ scripts/             dev server, icon generation, VAPID keygen
 Everything fits the free plan. The live deployment is
 **[healthmap.acklenx.com](https://healthmap.acklenx.com)**.
 
-Deploys are **direct uploads** — GitHub Actions pushes the built folder to
-Cloudflare with `wrangler pages deploy`. Cloudflare never reads the repository.
-Don't also connect the Pages Git integration: there is no build step for it to
-run, and the nightly job commits refreshed data back to the repo, so every
-crawl would kick off a redundant second build on top of the deploy that just
-happened.
+Deployment is Cloudflare's **Pages Git integration**: the project watches this
+repository and publishes on every push to `main`. There is no build step for it
+to run — Leaflet is vendored and the dataset is a committed file — so a deploy
+is really just Cloudflare copying `web/public/` to the edge and compiling
+`web/functions/` into Pages Functions.
+
+The useful consequence is that **no Cloudflare credentials exist anywhere in
+this repository.** CI never authenticates to Cloudflare, because CI never talks
+to Cloudflare. The nightly job commits refreshed data and the push does the
+rest.
 
 **1. Create the Pages project**
 
-```bash
-cd web
-npx wrangler pages project create score --production-branch main
-```
+Workers & Pages → Create → Pages → Connect to Git, and pick this repository.
 
-**2. First data load and deploy**
+| Setting | Value |
+|---|---|
+| Project name | `healthmap` — must match `name` in `web/wrangler.toml` |
+| Production branch | `main` |
+| Framework preset | None |
+| Build command | *(empty)* |
+| Root directory | `web` |
 
-```bash
-python3 crawler/crawl.py --full          # ~20 minutes, ~2,000 page fetches
-cd web && npx wrangler pages deploy
-```
+The root directory is the setting that matters. Pointing it at `web` is what
+lets Cloudflare find `wrangler.toml`, serve `public/` as the output directory,
+and pick up the sibling `functions/` folder. Point it at the repository root
+instead and the API routes silently never deploy — the list and the map still
+work, so the failure only shows up when you tap through to a report.
 
-**3. Point the subdomain at it**
+**2. Point the subdomain at it**
 
 In the Pages project: **Custom domains → Set up a custom domain →**
 `healthmap.acklenx.com`.
@@ -148,38 +156,35 @@ no DNS record to add by hand. It is usually serving within a minute.
 
 Nothing in the app is aware of its own hostname — every URL in `public/` is
 relative and the manifest scopes to `/` — so the custom domain needs no code
-change, and `score.pages.dev` keeps working alongside it.
+change, and the `.pages.dev` address keeps working alongside it.
 
-**4. Automate the refresh**
+**3. The nightly refresh**
 
-Push the repo to GitHub and add these repository secrets:
+`.github/workflows/refresh.yml` runs an incremental crawl nightly and a full
+crawl on Sundays, verifies the payload, and commits it. That commit is what
+triggers the next deploy.
 
-| Secret | Value |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | a token with *Cloudflare Pages: Edit* |
-| `CLOUDFLARE_ACCOUNT_ID` | your account id |
+It needs no secrets, but it does need write access to the repository: check
+**Settings → Actions → General → Workflow permissions** is set to *Read and
+write*, or the crawl succeeds and the `git push` at the end fails.
 
-`.github/workflows/refresh.yml` then runs an incremental crawl nightly and a
-full crawl on Sundays, commits the data, and deploys.
-
-That commit step needs write access: check **Settings → Actions → General →
-Workflow permissions** is set to *Read and write*, or the nightly `git push`
-fails after a successful crawl.
-
-**5. Optional — push alerts for saved places**
+**4. Optional — push alerts for saved places**
 
 Alerts are off by default. The D1 binding in `web/wrangler.toml` is commented
 out, and `/api/subscribe`, `/api/notify` and `/api/pending` return 503 while it
 is — a deploy carrying a placeholder `database_id` would be rejected outright.
 
+This is the one part that needs `wrangler` locally:
+
 ```bash
-npx wrangler d1 create score                 # uncomment the binding, paste the id
-npx wrangler d1 execute score --remote --file=web/schema.sql
+npx wrangler login
+npx wrangler d1 create healthmap             # uncomment the binding, paste the id
+npx wrangler d1 execute healthmap --remote --file=web/schema.sql
 node scripts/gen_vapid.mjs                   # generates the key pair
 ```
 
 Set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `NOTIFY_SECRET` on the Pages
-project (`npx wrangler pages secret put <NAME>`), point `VAPID_SUBJECT` in
+project (Settings → Environment variables), point `VAPID_SUBJECT` in
 `wrangler.toml` at a real mailbox, and add to the GitHub repository secrets:
 
 | Secret | Value |
@@ -200,6 +205,7 @@ git stores a fresh blob each time, so the history grows by a few megabytes a
 week. It cannot simply be ignored — the crawler diffs against the previous
 `store.json` to work out what changed and who to alert. If it ever gets
 uncomfortable, squash the data history or move the store to an R2 bucket.
+
 ## Reading the scores fairly
 
 A score is one inspector's snapshot of one visit, not a running verdict — a 71

@@ -2,15 +2,16 @@
 #
 # The crawler runs here rather than on Cloudflare because a full crawl is a
 # couple of thousand page fetches, which does not fit inside a Worker's
-# subrequest budget. GitHub Actions does it for free, commits the result, and
-# pushes the static payload to Cloudflare Pages.
+# subrequest budget. GitHub Actions does it for free and commits the result.
 #
-# Required repository secrets:
-#   CLOUDFLARE_API_TOKEN    token with "Cloudflare Pages: Edit" permission
-#   CLOUDFLARE_ACCOUNT_ID   your account id
-#   NOTIFY_SECRET           same value set on the Pages project (optional;
-#                           only needed if push alerts are enabled)
-#   APP_ORIGIN              https://healthmap.acklenx.com (optional, for alerts)
+# Committing *is* the deploy. The Pages project is wired to this repository
+# through Cloudflare's Git integration, so the push at the end of this job is
+# what publishes the new payload. Nothing here talks to Cloudflare, and no
+# Cloudflare credentials are needed.
+#
+# Repository secrets (both optional -- only for push alerts):
+#   NOTIFY_SECRET           same value set on the Pages project
+#   APP_ORIGIN              https://healthmap.acklenx.com
 
 name: Refresh inspection data
 
@@ -77,15 +78,14 @@ jobs:
             git push
           fi
 
-      - name: Deploy to Cloudflare Pages
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        working-directory: web
-        run: npx --yes wrangler@latest pages deploy --project-name score --commit-dirty=true
+      # No deploy step. Cloudflare is watching this repository and the push
+      # above has already started the build. Adding `wrangler pages deploy`
+      # here would publish the same commit a second time.
 
       # Tell the app about new scores so it can alert anyone who saved that
-      # restaurant. Skipped silently when alerts aren't configured.
+      # restaurant. This only queues rows in D1 from the payload posted below,
+      # so it does not matter that the new data may still be building.
+      # Skipped silently when alerts aren't configured.
       - name: Send alerts
         env:
           NOTIFY_SECRET: ${{ secrets.NOTIFY_SECRET }}

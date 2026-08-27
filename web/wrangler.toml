@@ -1,11 +1,15 @@
 # Cloudflare Pages project for the Score app.
 #
-# Static assets live in public/; the API routes in functions/ are deployed as
-# Pages Functions automatically. Everything here fits inside the free plan.
+# Deployed through the Pages Git integration: Cloudflare watches the GitHub
+# repository and publishes on every push. There is no build step -- Leaflet is
+# vendored and the payload is a committed static file -- so the build command
+# is empty and this file supplies the rest.
 #
-#   npx wrangler pages deploy            (run from this directory)
+# The name below must match the Pages project exactly or the build is rejected.
+# Set the project's root directory to `web`, so that both public/ and the
+# functions/ directory beside it are picked up.
 
-name = "score"
+name = "healthmap"
 pages_build_output_dir = "public"
 compatibility_date = "2026-01-01"
 
@@ -18,13 +22,13 @@ compatibility_date = "2026-01-01"
 # database_id is rejected, so this stays off until the database really exists.
 #
 # To turn alerts on:
-#   npx wrangler d1 create score
-#   npx wrangler d1 execute score --remote --file=schema.sql
+#   npx wrangler d1 create healthmap
+#   npx wrangler d1 execute healthmap --remote --file=schema.sql
 # then uncomment the block below and paste in the returned id.
 #
 # [[d1_databases]]
 # binding = "DB"
-# database_name = "score"
+# database_name = "healthmap"
 # database_id = ""
 
 [vars]

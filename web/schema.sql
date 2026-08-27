@@ -1,7 +1,7 @@
 -- D1 schema for push alerts.
 --
 -- Apply with:
---   npx wrangler d1 execute score --remote --file=schema.sql
+--   npx wrangler d1 execute healthmap --remote --file=schema.sql
 --
 -- There are no user accounts. A subscription is identified only by the opaque
 -- push endpoint the browser mints, and the only thing stored against it is the
