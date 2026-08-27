@@ -51,3 +51,7 @@
 # stamp_assets.py -- it changes on a different schedule to the app.
 /places.json
   Cache-Control: public, max-age=31536000, immutable
+
+# Same stamp as the payload, same reasoning.
+/history/*
+  Cache-Control: public, max-age=31536000, immutable

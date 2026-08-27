@@ -28,10 +28,24 @@ GitHub Actions (nightly)          Cloudflare Pages (free)
                                    tile.openstreetmap.org
 ```
 
-**The bulk data is a static file.** All ~13,000 establishments with their full
-score history is a couple of megabytes, which the phone downloads once and then
-sorts locally. That is why there is no "search server" and no database of
-restaurants: distance sorting happens on the device, instantly, offline.
+**The list is a static file.** Every establishment, with its position and its
+latest score, is one download the phone sorts locally. That is why there is no
+"search server" and no database of restaurants: distance sorting happens on the
+device, instantly, offline.
+
+**Inspection history ships separately, one file per ZIP.** It was half the wire
+size of the payload and the list needs none of it — only the latest score, to
+draw the badge and to sort by. Opening a place fetches its ZIP's shard, a few
+kilobytes, and fills in every other place in that ZIP at the same time. Sharded
+geographically rather than by id because that is how it gets read: you look at
+two or three places near you, which are near each other, so the second and third
+cost nothing.
+
+| | Gzipped |
+|---|---|
+| before, one file | 0.62 MB |
+| `places.json` now | **0.38 MB** |
+| `history/<zip>.json` | 3.1 KB median, 13.7 KB largest |
 
 **Inspection reports are fetched on demand.** There are tens of thousands of
 individual reports and almost none will ever be opened, so `/api/report` proxies

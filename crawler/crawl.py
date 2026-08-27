@@ -161,12 +161,20 @@ def build_payload(store):
 
     Grades are omitted -- they're a pure function of the score, so the client
     derives them and we save ~13k redundant strings.
+
+    Full inspection history is *not* in here. It was half the wire size and the
+    list needs none of it -- only the latest score, to draw the badge and to
+    sort by. It ships separately, one file per ZIP, fetched when a sheet is
+    opened. See build_history().
     """
     places = []
     for eid, est in sorted(store.items()):
         if "lat" not in est:
             continue  # unplaceable; distance sort would be meaningless
         history = sorted(est["inspections"], key=lambda i: i["date"], reverse=True)
+        if not history:
+            continue
+        latest = history[0]
         places.append(
             {
                 "i": eid,
@@ -178,7 +186,8 @@ def build_payload(store):
                 "y": est["lat"],
                 "x": est["lon"],
                 "p": est.get("precision", 0),
-                "h": [[i["date"], i["score"], i["insp_id"]] for i in history],
+                "l": [latest["date"], latest["score"], latest["insp_id"]],
+                "hn": len(history),
             }
         )
     return {
@@ -187,6 +196,31 @@ def build_payload(store):
         "counties": COUNTIES,
         "places": places,
     }
+
+
+def build_history(store):
+    """Inspection history, keyed by establishment id, split one file per ZIP.
+
+    ZIP rather than a hash of the id, because the access pattern is
+    geographic: you open two or three places near you, and near each other, so
+    they land in the same file and the second and third opens cost nothing. An
+    id-based shard would scatter the same three across three requests.
+
+    They are small. The whole history set is ~320 KB gzipped across 9k places,
+    so a median ZIP of 80 places is a few KB -- less than one map tile.
+    """
+    shards = {}
+    for eid, est in sorted(store.items()):
+        if "lat" not in est:
+            continue
+        history = sorted(est["inspections"], key=lambda i: i["date"], reverse=True)
+        if not history:
+            continue
+        zipcode = est["zip"] or "00000"
+        shards.setdefault(zipcode, {})[str(eid)] = [
+            [i["date"], i["score"], i["insp_id"]] for i in history
+        ]
+    return shards
 
 
 def main():
@@ -234,6 +268,18 @@ def main():
     save_json(os.path.join(DATA, "store.json"), {"places": {str(k): v for k, v in store.items()}})
     payload = build_payload(store)
     save_json(os.path.join(WEB_PUBLIC, "places.json"), payload, compact=True)
+
+    # History shards. Written fresh each run and stale ones removed, so a ZIP
+    # that loses its last establishment does not leave a file behind that the
+    # payload no longer points at.
+    hist_dir = os.path.join(WEB_PUBLIC, "history")
+    os.makedirs(hist_dir, exist_ok=True)
+    shards = build_history(store)
+    for zipcode, entries in shards.items():
+        save_json(os.path.join(hist_dir, "%s.json" % zipcode), entries, compact=True)
+    for stale in os.listdir(hist_dir):
+        if stale.endswith(".json") and stale[:-5] not in shards:
+            os.remove(os.path.join(hist_dir, stale))
     save_json(
         os.path.join(DATA, "changes.json"),
         {"generated": payload["generated"], "changes": all_changes},

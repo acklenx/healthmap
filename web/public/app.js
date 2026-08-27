@@ -21,7 +21,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "0c773f2b", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "7f0acdf9", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -268,6 +268,45 @@ async function fetchPayload(stamp) {
   return res.json();
 }
 
+/* Inspection history, one file per ZIP, fetched when a sheet is opened.
+ *
+ * Sharded geographically rather than by id because that is how it is read: you
+ * look at two or three places near you, which are near each other, so the
+ * second and third opens are already in memory. Each shard is a few KB.
+ *
+ * The stamp makes the URL immutable, exactly as it does for places.json.
+ */
+const historyShards = new Map();      // zip -> Promise of the shard
+
+function loadHistoryShard(zip) {
+  let pending = historyShards.get(zip);
+  if (pending) return pending;
+
+  pending = fetch(`/history/${encodeURIComponent(zip)}.json?v=${encodeURIComponent(state.generated)}`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`history/${zip}: ${res.status}`);
+      return res.json();
+    })
+    .then((entries) => {
+      // Fill in every place in the shard, not just the one that was asked for.
+      for (const place of state.places) {
+        if (place.zip !== zip || place.history) continue;
+        const rows = entries[String(place.id)];
+        if (rows) {
+          place.history = rows.map(([date, score, inspId]) => ({ date, score, inspId }));
+        }
+      }
+      return entries;
+    })
+    .catch((err) => {
+      historyShards.delete(zip);            // let a later open try again
+      throw err;
+    });
+
+  historyShards.set(zip, pending);
+  return pending;
+}
+
 function applyPayload(payload) {
   state.places = payload.places.map((p) => ({
     id: p.i,
@@ -279,10 +318,14 @@ function applyPayload(payload) {
     lat: p.y,
     lon: p.x,
     precision: p.p,
-    history: p.h.map(([date, score, inspId]) => ({ date, score, inspId })),
+    // Full history arrives with the ZIP's shard, on demand. The list only ever
+    // needed the latest score -- for the badge, and to sort by -- and carrying
+    // the rest was half the wire size of the payload.
+    history: null,
+    historyCount: p.hn,
     // Precomputed once so filtering/searching stays cheap across ~13k rows.
     search: `${p.n} ${p.a} ${p.c}`.toLowerCase(),
-    latest: p.h[0] ? { date: p.h[0][0], score: p.h[0][1], inspId: p.h[0][2] } : null,
+    latest: p.l ? { date: p.l[0], score: p.l[1], inspId: p.l[2] } : null,
   }));
   state.generated = payload.generated;
   el.freshness.textContent =
@@ -1443,6 +1486,43 @@ function openSheet(id) {
   showApproxNote(p);
   syncFavButton();
 
+  renderSheetBody(p);
+
+  el.sheet.hidden = false;
+  document.body.classList.add("sheet-open");
+  el.sheetScroll.scrollTop = 0;
+  history.pushState({ sheet: id }, "");
+
+  showSheetMap(p);
+  syncPins();      // ring the pin behind the sheet, so closing it lands in place
+
+  if (!p.history) fetchSheetHistory(p);
+}
+
+/** The sheet's scrolling half. Called again once history arrives. */
+function renderSheetBody(p) {
+  el.sheetBody.innerHTML = historySectionHTML(p) + alertsHTML();
+  // The most recent visit is what people came for — open it immediately.
+  if (p.history?.[0]) toggleDetail(p.history[0].inspId, true);
+}
+
+/* The list ships without inspection history, so opening a place may need a
+ * request. It is a few KB and usually already in the service worker's cache,
+ * but the sheet still has to say something in the meantime rather than appear
+ * to have nothing to show. The latest score is already known, so the heading
+ * can be honest about how many visits are coming. */
+function historySectionHTML(p) {
+  if (!p.history) {
+    const n = p.historyCount;
+    return `<h3 class="sec-title">Inspections</h3>
+      <p class="history-note" role="status">Loading ${n} ${n === 1 ? "visit" : "visits"}…</p>`;
+  }
+  if (p.history === "error") {
+    return `<h3 class="sec-title">Inspections</h3>
+      <p class="history-note">Couldn't load the inspection history. It needs a
+      connection the first time; the latest score above is already correct.</p>`;
+  }
+
   const rows = p.history.map((h, i) => {
     const g = gradeFor(h.score);
     return `<button class="insp-row" type="button" data-insp="${h.inspId}"
@@ -1457,22 +1537,19 @@ function openSheet(id) {
   const capped = p.history.length > CHART_POINTS
     ? ` Showing the last ${CHART_POINTS} of ${p.history.length}.`
     : "";
-  el.sheetBody.innerHTML =
-    (chart ? `<h3 class="sec-title">Score history</h3>${chart}
+  return (chart ? `<h3 class="sec-title">Score history</h3>${chart}
               <p class="history-note">Each dot is one inspection. Tap it for that visit's findings.${capped}</p>` : "") +
-    `<h3 class="sec-title">Inspections</h3><div class="insp">${rows}</div>` +
-    alertsHTML();
+    `<h3 class="sec-title">Inspections</h3><div class="insp">${rows}</div>`;
+}
 
-  el.sheet.hidden = false;
-  document.body.classList.add("sheet-open");
-  el.sheetScroll.scrollTop = 0;
-  history.pushState({ sheet: id }, "");
-
-  showSheetMap(p);
-  syncPins();      // ring the pin behind the sheet, so closing it lands in place
-
-  // The most recent visit is what people came for — open it immediately.
-  if (p.history[0]) toggleDetail(p.history[0].inspId, true);
+async function fetchSheetHistory(p) {
+  try {
+    await loadHistoryShard(p.zip);
+    if (!p.history) p.history = [];        // in the shard's ZIP but not its body
+  } catch {
+    p.history = "error";
+  }
+  if (state.open?.id === p.id) renderSheetBody(p);   // unless the sheet moved on
 }
 
 function closeSheet({ back = true } = {}) {

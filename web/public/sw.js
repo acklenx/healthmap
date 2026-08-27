@@ -7,6 +7,9 @@
  *   data      places.json?v=<stamp>. The stamp changes only when the crawler
  *             publishes, so a cached copy is correct forever. Old stamps are
  *             evicted on activate.
+ *   history   history/<zip>.json?v=<stamp>, fetched when a place is opened.
+ *             Same reasoning, but many URLs rather than one, so the eviction
+ *             keeps every shard carrying the current stamp and drops the rest.
  *   reports   /api/report responses. A completed inspection is a historical
  *             fact -- it never changes -- so these are kept indefinitely.
  *   tiles     OpenStreetMap raster tiles. Also effectively immutable, but this
@@ -16,9 +19,10 @@
  * few bytes, and caching it would defeat the entire scheme.
  */
 
-const SHELL_VERSION = "0c773f2b";
+const SHELL_VERSION = "7f0acdf9";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
+const HISTORY = "history-v1";
 const REPORTS = "reports-v1";
 const TILES = "tiles-v1";
 
@@ -28,12 +32,12 @@ const TILE_LIMIT = 900;      // roughly a couple of towns' worth, at a few kB ea
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?cache-id=0c773f2b",
-  "/app.js?cache-id=0c773f2b",
+  "/styles.css?cache-id=7f0acdf9",
+  "/app.js?cache-id=7f0acdf9",
   // Loaded on demand when something is shared, precached for the same reason
   // Leaflet is: the moment you want it is not a good moment to need the network.
-  "/qr.js?cache-id=0c773f2b",
-  "/manifest.webmanifest?cache-id=0c773f2b",
+  "/qr.js?cache-id=7f0acdf9",
+  "/manifest.webmanifest?cache-id=7f0acdf9",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least
   // likely to have signal to spare.
@@ -86,7 +90,7 @@ self.addEventListener("activate", (event) => {
 });
 
 /** Cache-first with no revalidation — for genuinely immutable URLs. */
-async function immutable(request, cacheName, { prune } = {}) {
+async function immutable(request, cacheName, { prune, pruneStale } = {}) {
   const cache = await caches.open(cacheName);
   const hit = await cache.match(request);
   if (hit) return hit;
@@ -97,6 +101,13 @@ async function immutable(request, cacheName, { prune } = {}) {
       // Only one version of the dataset is ever useful; drop the rest.
       for (const key of await cache.keys()) {
         if (key.url !== request.url) await cache.delete(key);
+      }
+    }
+    if (pruneStale) {
+      // Many URLs share one stamp here, so keep the whole current generation
+      // and drop anything left over from a previous crawl.
+      for (const key of await cache.keys()) {
+        if (new URL(key.url).searchParams.get("v") !== pruneStale) await cache.delete(key);
       }
     }
     cache.put(request, response.clone());
@@ -150,6 +161,14 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname === "/places.json") {
     event.respondWith(immutable(request, DATA, { prune: true }));
+    return;
+  }
+
+  // History shards, one per ZIP, each stamped with the same ?v= as the payload
+  // they belong to. Immutable for that stamp; the whole set is dropped when a
+  // new one arrives, since a shard from the previous crawl is just wrong.
+  if (url.pathname.startsWith("/history/")) {
+    event.respondWith(immutable(request, HISTORY, { pruneStale: url.searchParams.get("v") }));
     return;
   }
 

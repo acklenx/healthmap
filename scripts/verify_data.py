@@ -70,15 +70,43 @@ def main():
         failures.append("%d places outside the expected bounding box (e.g. %s)"
                         % (len(strays), strays[0]["n"]))
 
-    no_history = [p for p in places if not p["h"]]
+    no_history = [p for p in places if not p.get("l")]
     if no_history:
         failures.append("%d places have no inspections" % len(no_history))
 
-    scores = [h[1] for p in places for h in p["h"]]
+    # History lives in web/public/history/<zip>.json now, not in the payload.
+    # Check it here too: the payload can look perfect while the shards it
+    # points at are missing, and that only shows up when a sheet is opened.
+    hist_dir = os.path.join(ROOT, "web", "public", "history")
+    shards = {}
+    if os.path.isdir(hist_dir):
+        for name in os.listdir(hist_dir):
+            if name.endswith(".json"):
+                with open(os.path.join(hist_dir, name), encoding="utf-8") as fh:
+                    shards[name[:-5]] = json.load(fh)
+
+    missing_shards = sorted({p["z"] for p in places if p["z"] not in shards})
+    if missing_shards:
+        failures.append("%d ZIPs have no history shard (e.g. %s)"
+                        % (len(missing_shards), missing_shards[0]))
+
+    orphans = [p for p in places
+               if p["z"] in shards and str(p["i"]) not in shards[p["z"]]]
+    if orphans:
+        failures.append("%d places have no history in their shard (e.g. %s)"
+                        % (len(orphans), orphans[0]["n"]))
+
+    scores = [h[1] for entries in shards.values() for rows in entries.values() for h in rows]
     bad = [s for s in scores if not 0 <= s <= 100]
-    print("inspections %d, score range %d-%d" % (len(scores), min(scores), max(scores)))
+    shard_bytes = sum(os.path.getsize(os.path.join(hist_dir, "%s.json" % z)) for z in shards) if shards else 0
+    print("inspections %d across %d ZIP shards (%.0f KB), score range %d-%d"
+          % (len(scores), len(shards), shard_bytes / 1024, min(scores), max(scores)))
     if bad:
         failures.append("%d scores outside 0-100" % len(bad))
+
+    counted = sum(p.get("hn", 0) for p in places)
+    if counted != len(scores):
+        failures.append("payload claims %d inspections, shards hold %d" % (counted, len(scores)))
 
     for expected in CANARIES + args.expect:
         hits = [n for n in names if expected.upper() in n]
