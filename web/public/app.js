@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "2b7ad8b9", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "1da04fb6", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -1169,9 +1169,13 @@ function paintCounties(states) {
     if (path) path.setAttribute("data-s", st);
     circle.setStyle({ fillOpacity: st === "idle" ? 0.12 : st === "queued" ? 0.28 : 0.5 });
   }
+  // data-on is "this county is in the published data" and stays true while it
+  // is being re-crawled; data-s is what is happening to it right now. Clearing
+  // data-on during a run made the cells contradict the "3 of 159" beside them.
+  const published = new Set(state.manifest?.counties.map((c) => c.c) || []);
   document.querySelectorAll(".cover-cells i[data-c]").forEach((cell) => {
     const st = states.get(cell.dataset.c) || "idle";
-    cell.toggleAttribute("data-on", st === "done");
+    cell.toggleAttribute("data-on", published.has(cell.dataset.c));
     if (st === "queued" || st === "scanning" || st === "fetched") cell.dataset.s = st;
     else delete cell.dataset.s;
   });
