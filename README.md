@@ -188,6 +188,13 @@ library would. A cluster is a count and nothing else: colour means a grade
 everywhere else in the app, and writing the worst score in a group onto its
 marker would read as a verdict on all of them.
 
+**Counties that are not loaded yet draw as hollow markers** at their centroid,
+carrying the count the manifest already knows. Zoomed out over a state that is
+mostly uncrawled, the map would otherwise be blank with no way to tell "no
+restaurants here" from "not fetched yet" — and they fill in as real clusters
+the moment their county lands, so a crawl spreading outwards is something you
+can watch rather than infer. Tapping one loads that county.
+
 **Tiles come from OpenStreetMap** — no key, no account, no build step. Leaflet
 is vendored into `web/public/vendor/` rather than pulled from a CDN, so the app
 stays installable, and the service worker precaches it: the first time you open
@@ -324,9 +331,34 @@ change, and the `.pages.dev` address keeps working alongside it.
 
 **3. The nightly refresh**
 
-`.github/workflows/refresh.yml` runs an incremental crawl nightly and a full
-crawl on Sundays, verifies the payload, and commits it. That commit is what
+`.github/workflows/refresh.yml` runs an incremental crawl weekly and a full
+crawl quarterly, verifies the payload, and commits it. That commit is what
 triggers the next deploy.
+
+Weekly rather than nightly because the data does not move fast enough to
+justify it: a run finds tens of new inspections across nine thousand places,
+and often none at all.
+
+**The crawler is deliberately slow.** Requests are serialised to one every half
+second across all workers — slower than a person clicking around the site, and
+a rounding error against its real traffic. This is somebody's health
+department, not a CDN, and a statewide full crawl is ~13,000 page fetches.
+`--delay` raises it further.
+
+A statewide run can also be split. `--chunk 2/4` crawls the second quarter of
+the county list, and because the crawler rebuilds its state from what it last
+published, a slice merges into the existing data rather than replacing it — so
+four runs on four days add up to the same result as one long one, with no run
+anywhere near a timeout. `--counties all` selects Georgia.
+
+**Counts are checked against the previous run**, not against thresholds written
+down by hand. Hand-set floors do not survive 159 counties: they would all need
+choosing and maintaining, and any county nobody thought about would have no
+floor at all — which is exactly the one that fails quietly. A county losing
+more than a fifth of its establishments, or vanishing having been crawled
+before, fails the run, as does the total dropping by a tenth. The baseline in
+`data/coverage.json` only advances once everything else agreed, so a bad run
+cannot quietly become the standard the next one is measured against.
 
 It needs no secrets, but it does need write access to the repository: check
 **Settings → Actions → General → Workflow permissions** is set to *Read and
