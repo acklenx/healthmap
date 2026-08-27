@@ -259,6 +259,40 @@ wherever the list is currently sorted from. It used to sit there permanently
 with a crosshair aiming it, which reads as an instruction on a screen you opened
 to look at pins.
 
+### Watching a crawl
+
+The repository is public, so its Actions API is readable from the browser with
+no token — which is how **More → Coverage & crawl** shows a run while it
+happens rather than only once it has published.
+
+Two constraints shape it. GitHub allows an unauthenticated caller **60 requests
+an hour**, and a dispatch's inputs are not exposed by the API at all.
+
+So the workflow puts its plan in the run's own title — `Refresh · all · chunk
+1/4 · full` — and the page parses it, reproducing `crawl.py`'s county slicing in
+JavaScript to work out exactly which counties are in scope. And the crawl runs
+as **eight sequential steps rather than one**, not for parallelism but because
+step status is the only thing about a running job a browser can read: one long
+step is a timer counting up and then, suddenly, done.
+
+The page polls every 45 seconds and animates locally in between — the elapsed
+clock ticks every second from `run_started_at` without asking anyone. Earlier it
+polled every 15 seconds and needed two requests to do it, which is 480 an hour
+against a limit of 60: the budget was gone after seven and a half minutes, which
+is about how long it takes to notice.
+
+Failures back off and are remembered. A rate limit is honoured to the second
+GitHub names in `x-ratelimit-reset`; anything else doubles from 45 seconds to a
+half-hour ceiling. The pause is written to `localStorage`, so reloading does not
+start spending the budget again, and one success clears it so a single blip does
+not leave the page timid for an hour.
+
+Counties are drawn from `web/public/georgia.json` — all 159 with centroids from
+the Census gazetteer, built by `scripts/make_counties.py`. The crawler cannot
+supply that, since by definition it knows nothing about counties it has never
+visited, and an uncrawled county drawn as nothing looks exactly like an empty
+one.
+
 ## Running it locally
 
 ```bash

@@ -373,6 +373,10 @@ def main():
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--delay", type=float, default=0.5,
                     help="minimum seconds between requests, across all workers")
+    ap.add_argument("--sub", default="",
+                    help="within the selected counties, crawl the kth of n "
+                         "parts. Used to split one job into several steps so "
+                         "progress is visible while it runs.")
     ap.add_argument("--chunk", default="",
                     help="crawl the Nth of M slices of the county list, e.g. 2/4. "
                          "Because the store is rebuilt from what was published, "
@@ -401,6 +405,17 @@ def main():
         size = math.ceil(len(counties) / parts)
         counties = counties[(index - 1) * size: index * size]
         log("Chunk %d of %d: %d counties" % (index, parts, len(counties)))
+
+    if args.sub:
+        try:
+            k, n = (int(x) for x in args.sub.split("/", 1))
+        except ValueError:
+            sys.exit("--sub wants K/N, e.g. 3/8")
+        if not 1 <= k <= n:
+            sys.exit("--sub %s is out of range" % args.sub)
+        size = math.ceil(len(counties) / n) or 1
+        counties = counties[(k - 1) * size: k * size]
+        log("  part %d of %d: %s" % (k, n, ", ".join(counties) or "(none)"))
 
     source.set_delay(args.delay)
     until = date.today() + timedelta(days=1)

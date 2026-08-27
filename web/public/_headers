@@ -32,6 +32,11 @@
 /qr.js
   Cache-Control: public, max-age=31536000, immutable
 
+# County geography. Boundaries do not move; this changes only if the gazetteer
+# vintage does, which is a deliberate act.
+/georgia.json
+  Cache-Control: public, max-age=604800
+
 /manifest.webmanifest
   Cache-Control: public, max-age=31536000, immutable
 

@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Score">
-<link rel="manifest" href="/manifest.webmanifest?cache-id=385682c1">
+<link rel="manifest" href="/manifest.webmanifest?cache-id=2b7ad8b9">
 <link rel="icon" href="/icons/icon.svg?cache-id=2290448a" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/icon-192.png?cache-id=2290448a">
-<link rel="stylesheet" href="/styles.css?cache-id=385682c1">
+<link rel="stylesheet" href="/styles.css?cache-id=2b7ad8b9">
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
 </head>
 <body>
@@ -233,13 +233,14 @@
       </button>
     </div>
     <div class="sheet-body" id="status-body">
-      <div id="status-stats" class="stat-grid"></div>
-      <div id="status-progress"></div>
-      <h3 class="sec-title">Where the data comes from</h3>
+      <!-- When something is running this is the first thing on the screen,
+           before anything you would have to scroll to. -->
+      <div id="status-live" hidden aria-live="polite"></div>
       <div id="status-map" class="cover-map"><span id="status-map-canvas" class="cover-map-canvas" aria-hidden="true"></span></div>
-      <p class="sheet-hint">Each box is a county that has been crawled, sized by its
-        own extent and shaded by how many places are in it.</p>
-      <h3 class="sec-title">Latest crawls</h3>
+      <p id="status-legend" class="cover-legend"></p>
+      <div id="status-progress"></div>
+      <div id="status-stats" class="stat-grid"></div>
+      <h3 class="sec-title">Recent crawls</h3>
       <div id="status-runs" aria-live="polite"></div>
       <h3 class="sec-title">By county</h3>
       <div class="table-wrap"><table class="area-table" id="status-counties"></table></div>
@@ -399,6 +400,6 @@
   </section>
 </div>
 
-<script src="/app.js?cache-id=385682c1" type="module"></script>
+<script src="/app.js?cache-id=2b7ad8b9" type="module"></script>
 </body>
 </html>

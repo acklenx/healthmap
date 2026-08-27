@@ -461,10 +461,59 @@ main { padding: 0 14px; }
 
 /* ---- coverage and crawl status ----------------------------------------- */
 
-.cover-map { position: relative; height: 240px; border: 1px solid var(--border);
-             border-radius: 12px; overflow: hidden; background: var(--wash); }
+.cover-map { position: relative; height: 300px; border: 1px solid var(--border);
+             border-radius: 12px; overflow: hidden; background: var(--wash);
+             margin-bottom: 8px; }
 .cover-map-canvas { position: absolute; inset: 0; display: block; }
+/* A county's state, on the map and in the cells, in one vocabulary:
+     done      crawled, and in the published data
+     scanning  being fetched right now
+     queued    in this run's plan, not reached yet
+     idle      not part of anything currently happening */
 .cover-box { stroke: var(--accent); fill: var(--accent); }
+
+.co { stroke-width: 1; }
+.co[data-s="idle"]     { stroke: var(--axis); fill: var(--axis); }
+.co[data-s="done"]     { stroke: var(--accent); fill: var(--accent); }
+.co[data-s="fetched"]  { stroke: var(--grade-a); fill: var(--grade-a); }
+.co[data-s="failure"]  { stroke: var(--grade-u); fill: var(--grade-u); stroke-width: 2; }
+.co[data-s="queued"]   { stroke: var(--ink-muted); fill: var(--ink-muted); }
+.co[data-s="scanning"] { stroke: var(--grade-b); fill: var(--grade-b); stroke-width: 2;
+                         animation: scanpulse 1.2s ease-in-out infinite; }
+@keyframes scanpulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .co[data-s="scanning"] { animation: none; } }
+
+.cover-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 4px;
+                color: var(--ink-muted); font-size: 12px; }
+.cover-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.cover-legend i { width: 9px; height: 9px; border-radius: 2px; background: var(--axis); }
+.cover-legend i[data-s="done"]     { background: var(--accent); }
+.cover-legend i[data-s="queued"]   { background: var(--ink-muted); }
+.cover-legend i[data-s="scanning"] { background: var(--grade-b); }
+.cover-legend i[data-s="fetched"]  { background: var(--grade-a); }
+
+/* The live block. First thing in the sheet while a crawl is running. */
+.live {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-radius: 12px;
+  background: var(--accent-wash);
+}
+.live[hidden] { display: none; }
+.live-top { display: flex; align-items: baseline; gap: 8px; }
+.live-title { font-size: 15px; font-weight: 650; }
+.live-clock { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600;
+              color: var(--accent); }
+.live-plan { margin: 4px 0 0; color: var(--ink-2); font-size: 12.5px; line-height: 1.45; }
+.live-now { margin: 8px 0 0; font-size: 13px; font-weight: 600; }
+.live-parts { display: flex; gap: 3px; margin: 8px 0 0; }
+.live-parts i { flex: 1 1 0; height: 6px; border-radius: 999px; background: var(--wash);
+                box-shadow: inset 0 0 0 1px var(--border); }
+.live-parts i[data-s="completed"] { background: var(--accent); box-shadow: none; }
+.live-parts i[data-s="in_progress"] { background: var(--grade-b); box-shadow: none;
+                                      animation: scanpulse 1.2s ease-in-out infinite; }
+.live-parts i[data-s="failure"] { background: var(--grade-u); box-shadow: none; }
 
 /* Coverage as one cell per county.
    A bar was the obvious thing and the wrong one: three of 159 is a six-pixel
@@ -478,10 +527,11 @@ main { padding: 0 14px; }
   background: var(--wash);
   box-shadow: inset 0 0 0 1px var(--border);
 }
-.cover-cells i[data-on] {
-  background: var(--accent);
-  box-shadow: none;
-}
+.cover-cells i[data-on] { background: var(--accent); box-shadow: none; }
+.cover-cells i[data-s="queued"]   { background: var(--ink-muted); box-shadow: none; }
+.cover-cells i[data-s="scanning"] { background: var(--grade-b); box-shadow: none;
+                                    animation: scanpulse 1.2s ease-in-out infinite; }
+.cover-cells i[data-s="fetched"]  { background: var(--grade-a); box-shadow: none; }
 .cover-note { margin: 8px 0 0; color: var(--ink-muted); font-size: 12.5px; }
 .cover-note b { color: var(--ink); font-weight: 650; }
 

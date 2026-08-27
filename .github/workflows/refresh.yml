@@ -15,6 +15,13 @@
 
 name: Refresh inspection data
 
+# The plan, in the run's own title. There is no API for a dispatch's inputs, so
+# this is how the coverage page learns which counties a run is working on.
+run-name: >-
+  Refresh ${{ inputs.counties && format('· {0}', inputs.counties) || '' }}${{
+  inputs.chunk && format(' · chunk {0}', inputs.chunk) || '' }}${{
+  inputs.full == true && ' · full' || '' }}
+
 on:
   schedule:
     # Weekly incremental. Nightly was ~40 new inspections on a good day across
@@ -72,20 +79,110 @@ jobs:
             echo "args=--since-days 45" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Crawl
+      # The crawl is split into eight steps rather than one.
+      #
+      # Not for parallelism -- they run in order, and the throttle is global.
+      # It is so that progress is visible: step status is the only thing about
+      # a running job that an unauthenticated browser can read, and GitHub
+      # allows 60 such reads an hour. One long step gives a timer counting up
+      # and then, suddenly, done. Eight steps give something that moves.
+      #
+      # Each part publishes into the working tree; only the commit below is
+      # once, so this costs nothing but the step boundaries.
+      - name: "Crawl · part 1 of 8"
         env:
           COUNTIES: ${{ github.event.inputs.counties }}
           CHUNK: ${{ github.event.inputs.chunk }}
           DELAY: ${{ github.event.inputs.delay }}
         run: |
-          # if-blocks rather than `[ -n "$X" ] && ...`: this step runs under
-          # `bash -e`, where an and-list whose test fails makes the whole
-          # statement non-zero and kills the job. An empty input is normal.
-          set -- ${{ steps.mode.outputs.args }} --workers 3
+          set -- ${{ steps.mode.outputs.args }} --workers 3 --sub 1/8
           if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
           if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
-          echo "crawl.py $*"
+          python3 crawler/crawl.py "$@"
+
+      - name: "Crawl · part 2 of 8"
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+          DELAY: ${{ github.event.inputs.delay }}
+        run: |
+          set -- ${{ steps.mode.outputs.args }} --workers 3 --sub 2/8
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
+          python3 crawler/crawl.py "$@"
+
+      - name: "Crawl · part 3 of 8"
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+          DELAY: ${{ github.event.inputs.delay }}
+        run: |
+          set -- ${{ steps.mode.outputs.args }} --workers 3 --sub 3/8
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
+          python3 crawler/crawl.py "$@"
+
+      - name: "Crawl · part 4 of 8"
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+          DELAY: ${{ github.event.inputs.delay }}
+        run: |
+          set -- ${{ steps.mode.outputs.args }} --workers 3 --sub 4/8
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
+          python3 crawler/crawl.py "$@"
+
+      - name: "Crawl · part 5 of 8"
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+          DELAY: ${{ github.event.inputs.delay }}
+        run: |
+          set -- ${{ steps.mode.outputs.args }} --workers 3 --sub 5/8
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
+          python3 crawler/crawl.py "$@"
+
+      - name: "Crawl · part 6 of 8"
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+          DELAY: ${{ github.event.inputs.delay }}
+        run: |
+          set -- ${{ steps.mode.outputs.args }} --workers 3 --sub 6/8
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
+          python3 crawler/crawl.py "$@"
+
+      - name: "Crawl · part 7 of 8"
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+          DELAY: ${{ github.event.inputs.delay }}
+        run: |
+          set -- ${{ steps.mode.outputs.args }} --workers 3 --sub 7/8
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
+          python3 crawler/crawl.py "$@"
+
+      - name: "Crawl · part 8 of 8"
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+          DELAY: ${{ github.event.inputs.delay }}
+        run: |
+          set -- ${{ steps.mode.outputs.args }} --workers 3 --sub 8/8
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
 
       # A scrape fails quietly: upstream markup changes and the payload comes

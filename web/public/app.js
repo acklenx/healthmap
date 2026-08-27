@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "385682c1", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "2b7ad8b9", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -38,6 +38,7 @@ const KEY = {
   checked: "score.lastChecked",
   pos: "score.lastPosition",
   favs: "score.favorites",
+  ghBackoff: "score.ghBackoff",
 };
 
 const GRADE_BANDS = [
@@ -73,6 +74,7 @@ const el = {
   statusSheet: $("#statussheet"), statusSub: $("#status-sub"), statusStats: $("#status-stats"),
   statusProgress: $("#status-progress"), statusRuns: $("#status-runs"),
   statusCounties: $("#status-counties"), statusMapCanvas: $("#status-map-canvas"),
+  statusLive: $("#status-live"), statusLegend: $("#status-legend"),
   shareSheet: $("#sharesheet"), shareQr: $("#share-qr"), shareLink: $("#share-link"),
   shareSub: $("#share-sub"), shareCopy: $("#share-copy"), shareCopyLabel: $("#share-copy-label"),
   shareNative: $("#share-native"),
@@ -91,6 +93,7 @@ const state = {
   // list arrives a county at a time, nearest first.
   manifest: null,
   loaded: new Set(),
+  georgia: null,          // all 159 counties and where they are
   // home  = where distances are measured from. Persisted; drives the whole app.
   // gps   = the device's own last fix. Live, never persisted, never sorts.
   // They are separate so that looking somewhere else on the map doesn't lose
@@ -169,6 +172,15 @@ function formatDate(iso) {
  * third of the width -- which is what lets the distance be the loudest thing
  * in the column when the list is sorted by distance. The exact date is still
  * on every inspection in the sheet. */
+/** "in 4 min" — for a pause with a known end. */
+function relativeFuture(ms) {
+  const secs = Math.max(0, Math.round((ms - Date.now()) / 1000));
+  if (secs < 60) return `in ${secs}s`;
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `in ${mins} min`;
+  return `in about ${Math.round(mins / 60)}h`;
+}
+
 function inspectionAge(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   const months = Math.max(0, Math.round((Date.now() - new Date(y, m - 1, d)) / 2.628e9));
@@ -792,22 +804,151 @@ function applyShareState() {
  * while the sheet is open, backs off hard when nothing is running, and says so
  * plainly if it runs out rather than sitting on a stale spinner. */
 const RUNS_API = "https://api.github.com/repos/acklenx/healthmap/actions";
-const POLL_ACTIVE = 15000;
-const POLL_IDLE = 300000;
+
+/* Polling budget.
+ *
+ * GitHub allows an unauthenticated caller 60 requests an hour per address, and
+ * this needs two of them (the run list, then that run's steps). At the 15s it
+ * used to poll that is 480 an hour: the budget was gone after seven and a half
+ * minutes of watching, which is roughly how long it takes to notice.
+ *
+ * So it polls slowly and animates locally instead. The elapsed clock ticks
+ * every second from run_started_at without asking anyone, and the eight crawl
+ * steps are enough that a state change lands most polls. */
+const POLL_ACTIVE = 45000;
+const POLL_IDLE = 600000;
+const CRAWL_PARTS = 8;
 
 let statusTimer = null;
 let statusMap = null;
-let statusRateLimited = false;
+let statusPaused = null;      // { until, why } while backing off
+
+/* Backoff, and a memory of it.
+ *
+ * Sixty requests an hour is easy to spend and slow to get back, and a reload
+ * used to start spending again immediately -- so the pause is written down and
+ * survives one. Rate limits are honoured to the second GitHub names in
+ * x-ratelimit-reset; everything else doubles from 45s to a half-hour ceiling.
+ * A success clears it, so one blip does not leave the page timid for an hour.
+ */
+const GH_MAX_BACKOFF = 30 * 60 * 1000;
+
+function ghBackoff() {
+  return readJSON(KEY.ghBackoff, null) || { until: 0, fails: 0 };
+}
+
+function ghPause(untilMs, fails, why) {
+  writeJSON(KEY.ghBackoff, { until: untilMs, fails, why });
+  statusPaused = { until: untilMs, why };
+}
+
+function ghClear() {
+  writeJSON(KEY.ghBackoff, { until: 0, fails: 0 });
+  statusPaused = null;
+}
 
 async function gh(path) {
-  const res = await fetch(`${RUNS_API}${path}`, { headers: { Accept: "application/vnd.github+json" } });
+  const state = ghBackoff();
+  const now = Date.now();
+  if (state.until > now) {
+    statusPaused = { until: state.until, why: state.why };
+    throw new Error("backing off");
+  }
+
+  let res;
+  try {
+    res = await fetch(`${RUNS_API}${path}`, { headers: { Accept: "application/vnd.github+json" } });
+  } catch (err) {
+    // Offline, DNS, blocked — not GitHub's fault, and not worth hammering.
+    const fails = state.fails + 1;
+    ghPause(now + Math.min(POLL_ACTIVE * 2 ** fails, GH_MAX_BACKOFF), fails, "unreachable");
+    throw err;
+  }
+
   if (res.status === 403 || res.status === 429) {
-    statusRateLimited = true;
+    // GitHub says exactly when it will talk again; take it at its word.
+    const reset = Number(res.headers.get("x-ratelimit-reset")) * 1000;
+    const after = Number(res.headers.get("retry-after")) * 1000;
+    const until = reset > now ? reset
+      : after ? now + after
+      : now + GH_MAX_BACKOFF;
+    ghPause(until, state.fails + 1, "rate limit");
     throw new Error("rate limited");
   }
-  if (!res.ok) throw new Error(String(res.status));
-  statusRateLimited = false;
+
+  if (!res.ok) {
+    const fails = state.fails + 1;
+    ghPause(now + Math.min(POLL_ACTIVE * 2 ** fails, GH_MAX_BACKOFF), fails, `HTTP ${res.status}`);
+    throw new Error(String(res.status));
+  }
+
+  ghClear();
   return res.json();
+}
+
+/* Which counties a run is working on.
+ *
+ * A dispatch's inputs are not exposed by the API, so the workflow puts them in
+ * the run's title instead -- "Refresh · all · chunk 1/4 · full". The slicing
+ * below has to match crawler/crawl.py exactly; it is the same arithmetic in
+ * two languages, which is a thing to be careful about rather than proud of.
+ */
+function sliceCounties(list, k, n) {
+  const size = Math.ceil(list.length / n) || 1;
+  return list.slice((k - 1) * size, k * size);
+}
+
+function planFor(run) {
+  const all = state.georgia?.map((c) => c.c) || [];
+  if (!all.length) return null;
+  const title = run.display_title || run.name || "";
+  const wantsAll = /·\s*all\b/.test(title);
+  let counties = wantsAll ? all : (state.manifest?.counties.map((c) => c.c) || []);
+  const chunk = title.match(/chunk\s*(\d+)\s*\/\s*(\d+)/);
+  let label = wantsAll ? "every county in Georgia" : "the counties already covered";
+  if (chunk) {
+    counties = sliceCounties(counties, Number(chunk[1]), Number(chunk[2]));
+    label += ` · chunk ${chunk[1]} of ${chunk[2]}`;
+  }
+  return { counties, label, full: /·\s*full/.test(title) };
+}
+
+/** County -> what is happening to it, from the plan and the step states. */
+function countyStates(run, jobs) {
+  const done = new Set(state.manifest?.counties.map((c) => c.c) || []);
+  const map = new Map();
+  for (const c of state.georgia || []) map.set(c.c, done.has(c.c) ? "done" : "idle");
+
+  const plan = run ? planFor(run) : null;
+  if (!plan) return { map, plan };
+
+  const steps = (jobs?.jobs?.[0]?.steps || [])
+    .filter((st) => /^Crawl · part/.test(st.name))
+    .sort((a, b) => a.number - b.number);
+
+  plan.counties.forEach((c) => { if (map.get(c) !== "done") map.set(c, "queued"); });
+
+  // A run started before the crawl was split into parts has one long Crawl
+  // step and nothing to divide. Mark the whole plan as being crawled, which is
+  // true -- it just cannot say which county is under the needle right now.
+  if (!steps.length) {
+    const crawling = (jobs?.jobs?.[0]?.steps || [])
+      .some((st) => /^Crawl/.test(st.name) && st.status === "in_progress");
+    if (crawling) plan.counties.forEach((c) => map.set(c, "scanning"));
+    return { map, plan, steps };
+  }
+
+  steps.forEach((st, i) => {
+    const part = sliceCounties(plan.counties, i + 1, steps.length || CRAWL_PARTS);
+    // "fetched" rather than "done": this part has been crawled, but nothing is
+    // published until the run finishes, so calling it done would be a claim
+    // the map cannot back up if the job then fails.
+    const status = st.conclusion === "failure" ? "failure"
+      : st.status === "in_progress" ? "scanning"
+      : st.status === "completed" ? "fetched" : "queued";
+    for (const c of part) map.set(c, status);
+  });
+  return { map, plan, steps };
 }
 
 function duration(fromIso, toIso) {
@@ -852,6 +993,58 @@ function runHTML(run, jobs) {
   </div>`;
 }
 
+let liveClock = null;
+let liveStartedAt = null;
+
+function startClock(iso) {
+  liveStartedAt = iso;
+  clearInterval(liveClock);
+  const tick = () => {
+    const node = $("#live-clock");
+    if (!node || !liveStartedAt) return clearInterval(liveClock);
+    node.textContent = duration(liveStartedAt, null);
+  };
+  tick();
+  liveClock = setInterval(tick, 1000);
+}
+
+function stopClock() {
+  clearInterval(liveClock);
+  liveClock = liveStartedAt = null;
+}
+
+function liveHTML(run, jobs, info) {
+  const steps = info.steps || [];
+  const doneParts = steps.filter((st) => st.conclusion === "success").length;
+  const unsplit = !steps.length;
+  const active = steps.find((st) => st.status === "in_progress");
+  const activeIndex = active ? steps.indexOf(active) : -1;
+  const now = activeIndex >= 0
+    ? sliceCounties(info.plan.counties, activeIndex + 1, steps.length)
+    : [];
+
+  return `<div class="live-top">
+      <span class="live-title">Crawling now</span>
+      <span class="live-clock" id="live-clock">${duration(run.run_started_at || run.created_at, null)}</span>
+    </div>
+    <p class="live-plan">${info.plan
+      ? `${info.plan.full ? "Full history for " : ""}${escapeHTML(info.plan.label)} —
+         <b>${info.plan.counties.length}</b> ${info.plan.counties.length === 1 ? "county" : "counties"},
+         ${escapeHTML(info.plan.counties[0])} to ${escapeHTML(info.plan.counties[info.plan.counties.length - 1])}.`
+      : "Working."}</p>
+    ${steps.length ? `<div class="live-parts">${steps.map((st) =>
+      `<i data-s="${st.conclusion === "failure" ? "failure" : st.status}"></i>`).join("")}</div>` : ""}
+    <p class="live-now">${now.length
+      ? `Part ${activeIndex + 1} of ${steps.length}: ${now.map(escapeHTML).join(", ")}`
+      : unsplit
+        ? "Crawling — this run predates the split into parts, so it cannot say which county."
+        : doneParts === steps.length && steps.length
+          ? "All parts crawled — verifying and publishing."
+          : "Starting up."}</p>
+    <p class="live-plan">${unsplit ? "" : `${doneParts} of ${steps.length} parts done. `
+      }Nothing here changes the app until the run finishes and publishes.</p>`;
+}
+
 async function refreshRuns() {
   try {
     const data = await gh("/runs?per_page=4");
@@ -864,22 +1057,37 @@ async function refreshRuns() {
       ? runs.map((r) => runHTML(r, r.id === live?.id ? jobs : null)).join("")
       : `<p class="cover-note">No crawls have run yet.</p>`;
 
+    const info = countyStates(live, jobs);
+    if (live && info.plan) {
+      el.statusLive.className = "live";
+      el.statusLive.innerHTML = liveHTML(live, jobs, info);
+      el.statusLive.hidden = false;
+      startClock(live.run_started_at || live.created_at);
+    } else {
+      el.statusLive.hidden = true;
+      stopClock();
+    }
+    paintCounties(info.map);
     return !!live;
   } catch {
-    el.statusRuns.innerHTML = statusRateLimited
-      ? `<p class="cover-note">GitHub's API is rate limited for now — it allows
-         60 checks an hour per address, and this page has used them. It will
-         work again within the hour;
-         <a href="https://github.com/acklenx/healthmap/actions" target="_blank" rel="noopener">the runs are on GitHub ↗</a>
-         in the meantime.</p>`
-      : `<p class="cover-note">Couldn't reach GitHub to check on the crawl.
-         <a href="https://github.com/acklenx/healthmap/actions" target="_blank" rel="noopener">Runs are here ↗</a>.</p>`;
+    el.statusLive.hidden = true;
+    stopClock();
+    const link = `<a href="https://github.com/acklenx/healthmap/actions" target="_blank" rel="noopener">the runs are on GitHub ↗</a>`;
+    el.statusRuns.innerHTML = statusPaused
+      ? `<p class="cover-note">Crawl status paused — ${escapeHTML(statusPaused.why)}.
+         Trying again ${relativeFuture(statusPaused.until)}. GitHub allows 60
+         unauthenticated checks an hour, and this page would rather wait than
+         get itself blocked; ${link} meanwhile.</p>`
+      : `<p class="cover-note">Couldn't reach GitHub to check on the crawl. ${link}.</p>`;
+    paintCounties(countyStates(null, null).map);
     return false;
   }
 }
 
+
 function coverageHTML(m) {
   const covered = m.counties.length;
+  const done = new Set(m.counties.map((c) => c.c));
   const pct = (covered / m.all_counties) * 100;
   const places = m.places.toLocaleString();
   return {
@@ -895,8 +1103,8 @@ function coverageHTML(m) {
     progress: `<div class="cover-bar">
         <div class="cover-cells" role="img"
              aria-label="${covered} of ${m.all_counties} Georgia counties crawled">${
-          Array.from({ length: m.all_counties }, (_, i) =>
-            `<i${i < covered ? ' data-on=""' : ""}></i>`).join("")
+          (state.georgia || []).map((c) =>
+            `<i data-c="${escapeHTML(c.c)}"${done.has(c.c) ? ' data-on=""' : ""}></i>`).join("")
         }</div>
         <p class="cover-note"><b>${covered}</b> of ${m.all_counties} counties —
           ${pct < 1 ? "under 1" : pct.toFixed(0)}% of Georgia.
@@ -912,8 +1120,20 @@ function coverageHTML(m) {
   };
 }
 
-/** Boxes on a map of Georgia: what is covered, and how much of it is not. */
-async function drawCoverageMap(m) {
+/* Every county in Georgia, painted by what is happening to it.
+ *
+ * Drawing only the crawled ones made an uncrawled county and an empty one look
+ * identical -- which is exactly the question this page exists to answer. The
+ * geography comes from web/public/georgia.json (Census gazetteer, built by
+ * scripts/make_counties.py), because the crawler by definition does not know
+ * about counties it has never visited.
+ *
+ * Circles sized by land area rather than boundary polygons: it reads as the
+ * shape of the state at this size, for 10 KB instead of megabytes.
+ */
+const countyLayers = new Map();
+
+async function drawCoverageMap() {
   let lib;
   try { lib = await loadLeaflet(); } catch { return; }
   L = L || lib;
@@ -924,35 +1144,74 @@ async function drawCoverageMap(m) {
       doubleClickZoom: false, boxZoom: false, keyboard: false, attributionControl: false,
     });
     L.tileLayer(TILES, { maxZoom: 12, crossOrigin: true }).addTo(statusMap);
+    statusMap.fitBounds([[30.3, -85.7], [35.05, -80.85]], { padding: [4, 4] });
   }
-  statusMap.eachLayer((l) => { if (l instanceof L.Rectangle) statusMap.removeLayer(l); });
 
-  const most = Math.max(...m.counties.map((c) => c.n), 1);
-  for (const c of m.counties) {
-    L.rectangle([[c.b[0], c.b[1]], [c.b[2], c.b[3]]], {
-      className: "cover-box",
-      weight: 1.2,
-      fillOpacity: 0.12 + 0.4 * (c.n / most),
+  for (const c of state.georgia || []) {
+    if (countyLayers.has(c.c)) continue;
+    const circle = L.circle([c.y, c.x], {
+      radius: c.r * 1609.34 * 0.72,   // a shade under its real extent, so neighbours read apart
+      className: "co",
+      weight: 1,
+      fillOpacity: 0.35,
       interactive: false,
     }).addTo(statusMap);
+    countyLayers.set(c.c, circle);
   }
   statusMap.invalidateSize();
-  // Georgia, so the gap between what is covered and what is not is the point.
-  statusMap.fitBounds([[30.3, -85.7], [35.05, -80.8]], { padding: [6, 6] });
 }
+
+/** Apply a county -> state map to the circles and to the cells. */
+function paintCounties(states) {
+  for (const [name, circle] of countyLayers) {
+    const st = states.get(name) || "idle";
+    const path = circle.getElement?.();
+    if (path) path.setAttribute("data-s", st);
+    circle.setStyle({ fillOpacity: st === "idle" ? 0.12 : st === "queued" ? 0.28 : 0.5 });
+  }
+  document.querySelectorAll(".cover-cells i[data-c]").forEach((cell) => {
+    const st = states.get(cell.dataset.c) || "idle";
+    cell.toggleAttribute("data-on", st === "done");
+    if (st === "queued" || st === "scanning" || st === "fetched") cell.dataset.s = st;
+    else delete cell.dataset.s;
+  });
+}
+
+/** The 159 counties and where they are. Static, fetched once. */
+async function loadGeorgia() {
+  if (state.georgia) return state.georgia;
+  const res = await fetch("/georgia.json");
+  if (!res.ok) throw new Error(`georgia.json: ${res.status}`);
+  state.georgia = (await res.json()).counties;
+  return state.georgia;
+}
+
+const LEGEND = [
+  ["done", "published"],
+  ["scanning", "crawling now"],
+  ["fetched", "crawled, not published yet"],
+  ["queued", "queued"],
+  ["idle", "not scheduled"],
+];
 
 async function openStatusSheet() {
   const m = state.manifest;
   if (!m) return;
+  try { await loadGeorgia(); } catch { /* the map degrades; the rest is fine */ }
+
   const parts = coverageHTML(m);
   el.statusSub.textContent =
     `${m.counties.length} of ${m.all_counties} Georgia counties`;
   el.statusStats.innerHTML = parts.stats;
   el.statusProgress.innerHTML = parts.progress;
   el.statusCounties.innerHTML = parts.table;
+  el.statusLegend.innerHTML = LEGEND.map(([k, label]) =>
+    `<span><i data-s="${k}"></i>${label}</span>`).join("");
   el.statusRuns.innerHTML = `<p class="cover-note">Checking GitHub…</p>`;
+  el.statusLive.hidden = true;
   setSheet(el.statusSheet, true);
-  drawCoverageMap(m);
+  await drawCoverageMap();
+  paintCounties(countyStates(null, null).map);
   pollRuns();
 }
 
@@ -961,11 +1220,16 @@ async function pollRuns() {
   if (el.statusSheet.hidden) return;
   const live = await refreshRuns();
   if (el.statusSheet.hidden) return;
-  statusTimer = setTimeout(pollRuns, live ? POLL_ACTIVE : POLL_IDLE);
+  // While paused, wake up when the pause ends rather than on the usual beat.
+  const wait = statusPaused && statusPaused.until > Date.now()
+    ? Math.min(statusPaused.until - Date.now() + 1000, GH_MAX_BACKOFF)
+    : live ? POLL_ACTIVE : POLL_IDLE;
+  statusTimer = setTimeout(pollRuns, wait);
 }
 
 function closeStatusSheet() {
   clearTimeout(statusTimer);
+  stopClock();
   setSheet(el.statusSheet, false);
 }
 
