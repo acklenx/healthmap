@@ -12236,6 +12236,11 @@
      "date": "2025-10-24",
      "insp_id": 57493584,
      "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549067,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -12815,6 +12820,11 @@
     {
      "date": "2025-06-25",
      "insp_id": 57473459,
+     "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549003,
      "score": 100
     }
    ],
@@ -33659,6 +33669,11 @@
      "date": "2026-02-20",
      "insp_id": 57513966,
      "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549014,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -35062,6 +35077,11 @@
      "date": "2025-12-04",
      "insp_id": 57500620,
      "score": 96
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548952,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -35920,6 +35940,11 @@
      "date": "2026-02-23",
      "insp_id": 57514292,
      "score": 80
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549083,
+     "score": 87
     }
    ],
    "kind": "Food Service Inspections",
@@ -56675,6 +56700,11 @@
      "date": "2025-12-10",
      "insp_id": 57501752,
      "score": 83
+    },
+    {
+     "date": "2026-08-25",
+     "insp_id": 57549037,
+     "score": 78
     }
    ],
    "kind": "Food Service Inspections",
@@ -58713,6 +58743,11 @@
      "date": "2026-03-31",
      "insp_id": 57521928,
      "score": 90
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549004,
+     "score": 98
     }
    ],
    "kind": "Food Service Inspections",
@@ -61202,6 +61237,11 @@
      "date": "2026-01-15",
      "insp_id": 57507551,
      "score": 98
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548937,
+     "score": 95
     }
    ],
    "kind": "Food Service Inspections",
@@ -67319,6 +67359,11 @@
      "date": "2025-10-03",
      "insp_id": 57489813,
      "score": 96
+    },
+    {
+     "date": "2026-08-19",
+     "insp_id": 57547727,
+     "score": 81
     }
    ],
    "kind": "Food Service Inspections",
@@ -73135,6 +73180,11 @@
     {
      "date": "2026-03-05",
      "insp_id": 57517078,
+     "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549030,
      "score": 100
     }
    ],
@@ -80566,6 +80616,11 @@
      "date": "2025-09-26",
      "insp_id": 57488534,
      "score": 96
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548976,
+     "score": 93
     }
    ],
    "kind": "Food Service Inspections",
@@ -92752,6 +92807,11 @@
      "date": "2025-03-28",
      "insp_id": 57461148,
      "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548973,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -93499,6 +93559,11 @@
      "date": "2026-03-03",
      "insp_id": 57516426,
      "score": 91
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548974,
+     "score": 95
     }
    ],
    "kind": "Food Service Inspections",
@@ -100225,6 +100290,11 @@
      "date": "2026-03-04",
      "insp_id": 57516765,
      "score": 86
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549011,
+     "score": 89
     }
    ],
    "kind": "Food Service Inspections",
@@ -109028,6 +109098,25 @@
    "precision": 2,
    "street": "699 PONCE DE LEON AVE NE STE 10",
    "zip": "30303"
+  },
+  "13002421": {
+   "city": "MABLETON",
+   "county": "Cobb",
+   "id": 13002421,
+   "inspections": [
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548927,
+     "score": 90
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "lat": 33.805752,
+   "lon": -84.528652,
+   "name": "TOUCHDOWN WINGS",
+   "precision": 2,
+   "street": "1025 VETERANS MEMORIAL HWY SE STE 650",
+   "zip": "30126"
   },
   "13002426": {
    "city": "ATLANTA",
@@ -118870,6 +118959,11 @@
      "date": "2026-02-27",
      "insp_id": 57515711,
      "score": 97
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549070,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -132447,6 +132541,11 @@
      "date": "2026-03-31",
      "insp_id": 57522009,
      "score": 92
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548941,
+     "score": 94
     }
    ],
    "kind": "Food Service Inspections",
@@ -136874,6 +136973,11 @@
      "date": "2026-06-12",
      "insp_id": 57535406,
      "score": 97
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548992,
+     "score": 90
     }
    ],
    "kind": "Food Service Inspections",
@@ -139103,6 +139207,25 @@
    "precision": 2,
    "street": "351 FERST DR",
    "zip": "30332"
+  },
+  "13016182": {
+   "city": "ROSWELL",
+   "county": "Fulton",
+   "id": 13016182,
+   "inspections": [
+    {
+     "date": "2026-08-27",
+     "insp_id": 57549102,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "lat": 34.019355,
+   "lon": -84.315055,
+   "name": "Chef Wu",
+   "precision": 2,
+   "street": "1570 HOLCOMB BRIDGE RD STE 810",
+   "zip": "30076"
   },
   "13016188": {
    "city": "ATLANTA",
@@ -145044,6 +145167,11 @@
      "date": "2026-03-23",
      "insp_id": 57520297,
      "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549062,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -146448,6 +146576,11 @@
      "date": "2026-03-31",
      "insp_id": 57521850,
      "score": 93
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549055,
+     "score": 96
     }
    ],
    "kind": "Food Service Inspections",
@@ -152181,6 +152314,11 @@
      "date": "2025-11-12",
      "insp_id": 57496891,
      "score": 96
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548978,
+     "score": 98
     }
    ],
    "kind": "Food Service Inspections",
@@ -163176,6 +163314,11 @@
      "date": "2025-12-11",
      "insp_id": 57502049,
      "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548920,
+     "score": 99
     }
    ],
    "kind": "Food Service Inspections",
@@ -185951,6 +186094,11 @@
      "date": "2025-08-11",
      "insp_id": 57480369,
      "score": 85
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548989,
+     "score": 84
     }
    ],
    "kind": "Food Service Inspections",
@@ -195997,6 +196145,11 @@
      "date": "2025-10-07",
      "insp_id": 57490456,
      "score": 99
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548965,
+     "score": 84
     }
    ],
    "kind": "Food Service Inspections",
@@ -199604,6 +199757,11 @@
      "date": "2025-10-08",
      "insp_id": 57490754,
      "score": 91
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549029,
+     "score": 88
     }
    ],
    "kind": "Food Service Inspections",
@@ -205405,6 +205563,11 @@
      "date": "2025-10-07",
      "insp_id": 57490357,
      "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548930,
+     "score": 91
     }
    ],
    "kind": "Food Service Inspections",
@@ -208198,6 +208361,11 @@
      "date": "2026-03-24",
      "insp_id": 57520414,
      "score": 94
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548968,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -214798,6 +214966,11 @@
      "date": "2025-12-16",
      "insp_id": 57503044,
      "score": 91
+    },
+    {
+     "date": "2026-08-24",
+     "insp_id": 57548560,
+     "score": 80
     }
    ],
    "kind": "Food Service Inspections",
@@ -220765,6 +220938,11 @@
      "date": "2026-03-04",
      "insp_id": 57516800,
      "score": 97
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548997,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -238248,6 +238426,11 @@
      "date": "2026-04-21",
      "insp_id": 57525591,
      "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549057,
+     "score": 96
     }
    ],
    "kind": "Food Service Inspections",
@@ -254121,6 +254304,11 @@
     {
      "date": "2026-02-03",
      "insp_id": 57510353,
+     "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548981,
      "score": 100
     }
    ],
@@ -271649,6 +271837,11 @@
      "date": "2026-08-19",
      "insp_id": 57547775,
      "score": 69
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548943,
+     "score": 77
     }
    ],
    "kind": "Food Service Inspections",
@@ -280211,6 +280404,11 @@
      "date": "2026-01-15",
      "insp_id": 57507502,
      "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549010,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -281108,6 +281306,11 @@
      "date": "2026-02-03",
      "insp_id": 57510350,
      "score": 94
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548983,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -291698,6 +291901,11 @@
      "date": "2026-02-02",
      "insp_id": 57510043,
      "score": 93
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549051,
+     "score": 96
     }
    ],
    "kind": "Food Service Inspections",
@@ -299221,6 +299429,11 @@
      "date": "2025-07-24",
      "insp_id": 57477675,
      "score": 91
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57549039,
+     "score": 93
     }
    ],
    "kind": "Food Service Inspections",
@@ -301751,6 +301964,11 @@
      "date": "2026-02-03",
      "insp_id": 57510357,
      "score": 98
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548980,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
@@ -305406,6 +305624,11 @@
     {
      "date": "2025-07-16",
      "insp_id": 57476311,
+     "score": 100
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548986,
      "score": 100
     }
    ],
@@ -316403,6 +316626,11 @@
      "date": "2026-03-30",
      "insp_id": 57521758,
      "score": 89
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548949,
+     "score": 99
     }
    ],
    "kind": "Food Service Inspections",
@@ -318279,6 +318507,11 @@
      "date": "2026-03-11",
      "insp_id": 57518090,
      "score": 91
+    },
+    {
+     "date": "2026-08-26",
+     "insp_id": 57548998,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
