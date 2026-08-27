@@ -16,7 +16,7 @@
  * few bytes, and caching it would defeat the entire scheme.
  */
 
-const SHELL_VERSION = "v2";
+const SHELL_VERSION = "v3";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const REPORTS = "reports-v1";

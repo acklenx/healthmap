@@ -243,7 +243,30 @@ main { padding: 0 14px; }
 }
 .card-meta { text-align: right; color: var(--ink-muted); font-size: 12.5px; }
 .card-dist { display: block; font-weight: 600; color: var(--ink-2); font-size: 13.5px; font-variant-numeric: tabular-nums; }
-.card-dist.is-approx::after { content: "~"; opacity: .6; }
+/* The uncertainty mark. Deliberately not one of the grade colours -- those are
+   fixed and mean a score -- and deliberately not red. This is a caveat about
+   where a place is, not a warning about the food. */
+.approx-ico {
+  width: 1em; height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: -.14em;
+  flex: 0 0 auto;
+}
+/* Coarse on purpose. The viewBox is 24 units wide and this renders at 13px, so
+   a fine dash pattern lands on sub-pixel gaps and fills in to a solid outline
+   -- which reads as an ordinary pin, the opposite of the point. */
+.approx-ico .approx-pin { stroke-dasharray: 4 3; }
+
+.card-dist.is-approx { color: var(--ink-muted); font-weight: 500; }
+.card-dist.is-approx .approx-ico {
+  width: 13px; height: 13px;
+  margin-right: 3px;
+  stroke-width: 2.3;
+}
 .card-star { width: 13px; height: 13px; fill: currentColor; stroke: none; color: var(--ink-muted); vertical-align: -1px; margin-right: 3px; }
 
 .sentinel { height: 1px; }
@@ -308,6 +331,25 @@ main { padding: 0 14px; }
 }
 .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 
+/* Above the actions, not below the map: the point is to be read before
+   Directions is tapped, which is the moment the guess stops being harmless. */
+.approx-note {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin: 10px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: 10px;
+  background: var(--accent-wash);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.approx-note[hidden] { display: none; }
+.approx-note .approx-ico { width: 17px; height: 17px; margin-top: 1px; color: var(--accent); }
+.approx-note b { color: var(--ink); font-weight: 650; }
+
 .sheet-actions { display: flex; gap: 8px; padding: 12px 16px 4px; }
 .action {
   flex: 1;
@@ -328,6 +370,12 @@ main { padding: 0 14px; }
 }
 .action:active { background: var(--wash); }
 .action svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; }
+/* The Directions button carries the mark too. Wherever else the caveat is on
+   screen, it should also be on the control that acts on it. */
+.action svg .dir-q { display: none; stroke-linecap: round; }
+.action.is-approx .dir-dot { display: none; }
+.action.is-approx svg .dir-q { display: inline; }
+.action.is-approx .dir-pin { stroke-dasharray: 4 3; }
 .action[aria-pressed="true"] { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); }
 .action[aria-pressed="true"] svg { fill: currentColor; }
 

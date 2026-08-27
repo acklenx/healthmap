@@ -52,6 +52,7 @@ const el = {
   sheetScroll: $("#sheet .sheet-body"),
   sheetMap: $("#sheet-map"), sheetMapCanvas: $("#sheet-map-canvas"),
   sheetMapLink: $("#sheet-map-link"), sheetMapTag: $("#sheet-map-tag"),
+  sheetApprox: $("#sheet-approx"),
 };
 
 const locEl = {
@@ -142,6 +143,20 @@ function relativeTime(iso) {
  *  "DADDY'S" into "Daddy'S". */
 /** A maps deep link. maps.google.com/?q= is the one form both iOS and Android
  *  hand off to the installed maps app, falling back to the web on desktop. */
+/* The mark for a position we are guessing at.
+ *
+ * A dashed pin with a question mark in it. Dashed is already this app's word
+ * for "not confirmed" -- the map pin border, the saved-place star outline and
+ * the halo round a ZIP centroid all use it -- so this reads as the same idea
+ * rather than a new one. The question mark is what survives at 13px in a list
+ * row, where a dash pattern alone is just texture.
+ */
+const APPROX_ICON =
+  '<svg class="approx-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+  '<path class="approx-pin" d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z"/>' +
+  '<path d="M10.4 8.5a1.7 1.7 0 1 1 2.4 1.55c-.6.4-.85.78-.85 1.35"/>' +
+  '<path d="M12 13.4v.01"/></svg>';
+
 function mapsUrl(p) {
   const q = `${p.name}, ${p.street}, ${p.city}, GA ${p.zip}`;
   return `https://maps.google.com/?q=${encodeURIComponent(q)}`;
@@ -440,8 +455,12 @@ function cardHTML(p) {
   const star = state.favorites.has(p.id)
     ? '<svg class="card-star" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.6 2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85Z"/></svg>'
     : "";
+  // An approximate distance is measured from the middle of a ZIP code, so it
+  // is marked in the list rather than only inside the sheet -- the whole point
+  // of sorting by distance is that the top of the list is trustworthy.
   const dist = p.distance != null
-    ? `<span class="card-dist${p.precision === 0 ? " is-approx" : ""}">${formatDistance(p.distance)}</span>`
+    ? `<span class="card-dist${p.precision === 0 ? " is-approx" : ""}">` +
+      `${p.precision === 0 ? APPROX_ICON : ""}${formatDistance(p.distance)}</span>`
     : "";
   return `<li><button class="card" type="button" data-id="${p.id}">
     <span class="badge" data-g="${grade}">${grade}<small>${latest ? latest.score : "—"}</small></span>
@@ -827,7 +846,7 @@ let sheetHalo = null;
 async function showSheetMap(p) {
   el.sheetMapLink.href = mapsUrl(p);
   el.sheetMapTag.textContent =
-    p.precision === 0 ? "Approximate · Open in Maps" : "Open in Maps";
+    p.precision === 0 ? "Centre of ZIP " + p.zip + " · Open in Maps" : "Open in Maps";
   el.sheetMap.hidden = false;
 
   let lib;
@@ -933,6 +952,30 @@ function historyChart(history) {
 
 /* ---------------------------------------------------------------- sheet --- */
 
+/* Say so, before the tap rather than after it.
+ *
+ * The failure worth designing against is arriving somewhere on the strength of
+ * a number the app was never sure of. So the warning sits above the Directions
+ * button instead of under the map, and the button's own pin picks up the mark
+ * -- whatever else is on screen, the thing being tapped carries the caveat.
+ *
+ * It is also careful about what it claims. Directions search by name and
+ * address text, not by our coordinates, so that link is not necessarily wrong;
+ * the distance and the pin are. Saying "this address is wrong" would overstate
+ * what we know and train people to ignore the notice.
+ */
+function showApproxNote(p) {
+  const approx = p.precision === 0;
+  el.dirBtn.classList.toggle("is-approx", approx);
+  el.sheetApprox.hidden = !approx;
+  if (!approx) return;
+  el.sheetApprox.innerHTML =
+    `${APPROX_ICON}<span><b>Rough location.</b> This address could not be matched ` +
+    `to a map, so the distance and the pin below are the middle of ZIP ` +
+    `${escapeHTML(p.zip)} — not the restaurant. Directions search by name, ` +
+    `which usually still finds it.</span>`;
+}
+
 function openSheet(id) {
   const p = state.places.find((x) => x.id === id);
   if (!p) return;
@@ -945,6 +988,7 @@ function openSheet(id) {
   // pin in the street, which matters for anything inside a mall or plaza.
   el.sheetAddr.href = mapsUrl(p);
   el.dirBtn.href = mapsUrl(p);
+  showApproxNote(p);
   syncFavButton();
 
   const rows = p.history.map((h, i) => {

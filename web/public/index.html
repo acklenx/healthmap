@@ -117,6 +117,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
     </div>
+    <p id="sheet-approx" class="approx-note" role="note" hidden></p>
     <div class="sheet-actions">
       <button id="fav-btn" class="action" type="button" aria-pressed="false">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -125,8 +126,11 @@
       </button>
       <a id="dir-btn" class="action" href="#" rel="noopener">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/>
-        </svg>Directions
+          <path class="dir-pin" d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z"/>
+          <circle class="dir-dot" cx="12" cy="10" r="2.6"/>
+          <path class="dir-q" d="M10.4 8.5a1.7 1.7 0 1 1 2.4 1.55c-.6.4-.85.78-.85 1.35"/>
+          <path class="dir-q" d="M12 13.4v.01"/>
+        </svg><span id="dir-label">Directions</span>
       </a>
     </div>
     <div class="sheet-body">

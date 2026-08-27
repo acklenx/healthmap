@@ -81,9 +81,22 @@ later. A failed *request* is never recorded as a miss; an outage would otherwise
 silence thousands of addresses for months.
 
 About 11% of addresses still end up without a street-range match. Those fall
-back to a centroid computed from the addresses that *did* match in the same ZIP,
-and the app marks their distance approximate with a `~`. Nothing is ever dropped
-from the list.
+back to a centroid computed from the addresses that *did* match in the same ZIP.
+Nothing is ever dropped from the list — but the app is emphatic about which
+rows those are, because a distance you can't trust is worse than no distance at
+all. The old treatment was a `~` after the number, which nobody ever noticed.
+
+**A guessed position is marked wherever it can be acted on.** A dashed pin with
+a question mark sits next to the distance in the list, and again in the detail
+sheet above a plain-language note naming the ZIP the pin actually points at.
+The Directions button takes the same mark, because the moment that matters is
+the one just before you set off, not the one after you arrive. Dashed is
+already this app's word for "not confirmed" — the map pins, the saved-place
+stars and the halo around a centroid all use it.
+
+The note is careful about what it claims: Directions search by name and address
+text rather than by our coordinates, so that link often does find the place. It
+is the *distance* and the *pin* that are guesses, and that is what it says.
 
 `scripts/check_geocoder.py` guards all of this. `verify_data.py` can only see
 the *aggregate* share of placed addresses, which the cache dominates — the
