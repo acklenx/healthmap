@@ -16,7 +16,7 @@
  * few bytes, and caching it would defeat the entire scheme.
  */
 
-const SHELL_VERSION = "v4";
+const SHELL_VERSION = "v5";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const REPORTS = "reports-v1";
@@ -30,6 +30,9 @@ const SHELL_ASSETS = [
   "/index.html",
   "/styles.css",
   "/app.js",
+  // Loaded on demand when something is shared, precached for the same reason
+  // Leaflet is: the moment you want it is not a good moment to need the network.
+  "/qr.js",
   "/manifest.webmanifest",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least

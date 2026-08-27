@@ -49,7 +49,7 @@
 
     <!-- Pan the map until the crosshair is where you want home to be. The
          crosshair is decoration; the button underneath carries the action. -->
-    <div id="crosshair" class="crosshair" aria-hidden="true">
+    <div id="crosshair" class="crosshair" aria-hidden="true" hidden>
       <svg viewBox="0 0 40 40" focusable="false">
         <circle cx="20" cy="20" r="10.5"/>
         <path d="M20 2.5v9M20 28.5v9M2.5 20h9M28.5 20h9"/>
@@ -67,11 +67,11 @@
       </svg>
     </button>
 
-    <button id="sethome" class="sethome" type="button">
+    <button id="sethome" class="sethome" type="button" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M3.6 10.4 12 3.6l8.4 6.8"/><path d="M5.8 12.2V20h12.4v-7.8"/>
       </svg>
-      Save this as home
+      <span>Sort from here</span>
     </button>
 
     <p id="map-note" class="map-note" role="status" aria-live="polite" hidden></p>
@@ -81,32 +81,49 @@
 <!-- Everything you reach for while standing outside a restaurant, in the part
      of the screen a thumb actually reaches. The header above scrolls away; this
      does not. -->
+<!-- Everything you reach for while standing outside a restaurant, in the part
+     of the screen a thumb actually reaches -- and labelled, because an icon on
+     its own is a thing you have to already know. -->
 <nav class="dock" aria-label="Search, filter and view">
-  <div class="dock-search">
+  <div class="dock-search" id="dock-search" hidden>
     <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8 21 21"/>
     </svg>
     <input id="search" type="search" placeholder="Search a restaurant" autocomplete="off"
            spellcheck="false" enterkeyhint="search" aria-label="Search restaurants by name">
+    <button id="search-done" class="search-done" type="button">Done</button>
   </div>
 
-  <button id="filter-btn" class="dock-btn" type="button" aria-haspopup="dialog"
-          aria-expanded="false" aria-label="Filter and sort">
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 7h16M7 12h10M10 17h4"/>
-    </svg>
-    <span id="filter-count" class="dock-dot" hidden></span>
-  </button>
+  <div class="dock-tabs">
+    <button id="search-btn" class="dock-tab" type="button" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8 21 21"/>
+      </svg><span>Search</span>
+      <i id="search-dot" class="dock-dot" hidden></i>
+    </button>
 
-  <button id="viewtoggle" class="dock-btn" type="button" aria-pressed="false">
-    <svg class="fab-map" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M9 3.6 3 6v14.4l6-2.4 6 2.4 6-2.4V3.6l-6 2.4Z"/><path d="M9 3.6v14.4M15 6v14.4"/>
-    </svg>
-    <svg class="fab-list" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 6.5h16M4 12h16M4 17.5h16"/>
-    </svg>
-    <span id="viewtoggle-label" class="u-sr">Map</span>
-  </button>
+    <button id="filter-btn" class="dock-tab" type="button" aria-haspopup="dialog" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M7 12h10M10 17h4"/>
+      </svg><span>Filter</span>
+      <i id="filter-count" class="dock-dot" hidden></i>
+    </button>
+
+    <button id="viewtoggle" class="dock-tab" type="button" aria-pressed="false">
+      <svg class="fab-map" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M9 3.6 3 6v14.4l6-2.4 6 2.4 6-2.4V3.6l-6 2.4Z"/><path d="M9 3.6v14.4M15 6v14.4"/>
+      </svg>
+      <svg class="fab-list" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 6.5h16M4 12h16M4 17.5h16"/>
+      </svg><span id="viewtoggle-label">Map</span>
+    </button>
+
+    <button id="more-btn" class="dock-tab" type="button" aria-haspopup="dialog" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+      </svg><span>More</span>
+    </button>
+  </div>
 </nav>
 
 <footer class="foot">
@@ -144,6 +161,13 @@
           <path class="dir-q" d="M12 13.4v.01"/>
         </svg><span id="dir-label">Directions</span>
       </a>
+      <!-- DPH publishes no website or menu, so this is honestly a search rather
+           than a link. Labelled "Look up" for that reason. -->
+      <a id="menu-btn" class="action" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5.5 4.5h13v15h-13z"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/>
+        </svg>Look up
+      </a>
     </div>
     <div class="sheet-body">
       <!-- The tap target overlays the map rather than wrapping it: Leaflet
@@ -157,6 +181,104 @@
         </a>
       </div>
       <div id="sheet-body" class="sheet-sections"></div>
+    </div>
+  </section>
+</div>
+
+<!-- Share. -->
+<div id="sharesheet" class="sheet" hidden>
+  <div class="sheet-scrim" data-close></div>
+  <section class="sheet-panel sheet-compact" role="dialog" aria-modal="true" aria-labelledby="share-title">
+    <div class="sheet-grab" data-close></div>
+    <div class="sheet-head">
+      <div>
+        <h2 id="share-title">Share</h2>
+        <p id="share-sub" class="sheet-sub"></p>
+      </div>
+      <button id="share-close" class="icon-btn" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <div id="share-qr" class="share-qr" aria-live="polite"></div>
+      <p id="share-link" class="share-link"></p>
+      <div class="share-actions">
+        <button id="share-copy" class="action" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 5.5h-9a2 2 0 0 0-2 2v9"/>
+          </svg><span id="share-copy-label">Copy link</span>
+        </button>
+        <button id="share-native" class="action" type="button" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 15.5V3.8M8.2 7.6 12 3.8l3.8 3.8"/><path d="M5 13.5v5.7a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5v-5.7"/>
+          </svg>Send
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Scores in this area. -->
+<div id="statssheet" class="sheet" hidden>
+  <div class="sheet-scrim" data-close></div>
+  <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+    <div class="sheet-grab" data-close></div>
+    <div class="sheet-head">
+      <div>
+        <h2 id="stats-title">Scores in this area</h2>
+        <p id="stats-scope" class="sheet-sub"></p>
+      </div>
+      <button id="stats-close" class="icon-btn" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="stats-body"></div>
+  </section>
+</div>
+
+<!-- Everything that is not a filter, a search or a view. It exists so those
+     features stop being things you have to already know about. -->
+<div id="moresheet" class="sheet" hidden>
+  <div class="sheet-scrim" data-close></div>
+  <section class="sheet-panel sheet-compact" role="dialog" aria-modal="true" aria-labelledby="more-title">
+    <div class="sheet-grab" data-close></div>
+    <div class="sheet-head">
+      <div><h2 id="more-title">More</h2></div>
+      <button id="more-close" class="icon-btn" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <button id="menu-stats" class="menu-row" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+        </svg>
+        <span><b>Scores in this area</b><small>Averages, spread, and how ZIPs compare</small></span>
+        <svg class="menu-go" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg>
+      </button>
+
+      <button id="menu-share" class="menu-row" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/>
+          <rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><path d="M13.5 13.5h3v3M20.5 20.5h-3v-3"/>
+        </svg>
+        <span><b>Share this view</b><small>A QR code a friend can scan</small></span>
+        <svg class="menu-go" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg>
+      </button>
+
+      <button id="menu-loc" class="menu-row" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/>
+          <path d="M12 1.6v3M12 19.4v3M1.6 12h3M19.4 12h3"/>
+        </svg>
+        <span><b>Where you are</b><small id="menu-loc-sub">Not set</small></span>
+        <svg class="menu-go" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg>
+      </button>
+
+      <p class="sheet-hint">Scores come from the <a href="https://ga.healthinspections.us/georgia/" rel="noopener" target="_blank">Georgia Department of Public Health</a>.
+        A 90–100 · B 80–89 · C 70–79 · U below 70. A score is one inspector's
+        snapshot of one visit, not a running verdict.</p>
+      <p id="more-fresh" class="sheet-hint"></p>
     </div>
   </section>
 </div>

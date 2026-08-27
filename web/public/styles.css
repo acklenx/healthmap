@@ -330,6 +330,7 @@ main { padding: 0 14px; }
   text-decoration: none;
   border-bottom: 1px solid var(--border);
 }
+.sheet-sub { margin: 3px 0 0; color: var(--ink-muted); font-size: 13px; }
 .sheet-addr::after { content: " ↗"; color: var(--ink-muted); font-size: 11px; }
 .sheet-addr:active { color: var(--accent); }
 
@@ -364,7 +365,7 @@ main { padding: 0 14px; }
 .approx-note .approx-ico { width: 17px; height: 17px; margin-top: 1px; color: var(--accent); }
 .approx-note b { color: var(--ink); font-weight: 650; }
 
-.sheet-actions { display: flex; gap: 8px; padding: 12px 16px 4px; }
+.sheet-actions { display: flex; gap: 6px; padding: 12px 16px 4px; }
 .action {
   flex: 1;
   display: inline-flex;
@@ -383,6 +384,7 @@ main { padding: 0 14px; }
   cursor: pointer;
 }
 .action:active { background: var(--wash); }
+.action { min-width: 0; }
 .action svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; }
 /* The Directions button carries the mark too. Wherever else the caveat is on
    screen, it should also be on the control that acts on it. */
@@ -407,6 +409,95 @@ main { padding: 0 14px; }
 .chip-grade.is-on i[data-g="C"] { background: var(--grade-c); }
 .chip-grade.is-on i[data-g="U"] { background: var(--grade-u); }
 .chip-grade:not(.is-on) { color: var(--ink-muted); }
+
+.share-qr {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  /* Always light: a scanner wants dark-on-light, and inverting a QR code is a
+     reliable way to make half of them refuse to read it. */
+  background: #fff;
+}
+.share-qr svg { width: min(240px, 62vw); height: auto; display: block; }
+.share-qr p { margin: 0; color: #666; font-size: 13px; }
+.share-link {
+  margin: 10px 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-all;
+}
+.share-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* ---- scores in this area ------------------------------------------------ */
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.stat {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.stat b { display: block; font-size: 26px; font-weight: 660; letter-spacing: -.02em;
+          font-variant-numeric: tabular-nums; }
+.stat small { display: block; margin-top: 2px; color: var(--ink-muted); font-size: 12px; }
+
+.dist { display: grid; gap: 8px; }
+.dist-row { display: grid; grid-template-columns: 22px 1fr 62px; align-items: center; gap: 10px; }
+.dist-key { font-weight: 680; font-size: 15px; text-align: center; }
+.dist-key[data-g="A"] { color: var(--grade-a); }
+.dist-key[data-g="B"] { color: var(--grade-b); }
+.dist-key[data-g="C"] { color: var(--grade-c); }
+.dist-key[data-g="U"] { color: var(--grade-u); }
+.dist-track { height: 12px; border-radius: 999px; background: var(--wash); overflow: hidden; }
+.dist-fill { display: block; height: 100%; border-radius: 999px; min-width: 2px; }
+.dist-fill[data-g="A"] { background: var(--grade-a); }
+.dist-fill[data-g="B"] { background: var(--grade-b); }
+.dist-fill[data-g="C"] { background: var(--grade-c); }
+.dist-fill[data-g="U"] { background: var(--grade-u); }
+.dist-n { text-align: right; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dist-n small { margin-left: 5px; color: var(--ink-muted); font-weight: 500; }
+
+/* Wide content scrolls inside its own box rather than the page. */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.area-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.area-table th, .area-table td { padding: 9px 8px; text-align: right; white-space: nowrap; }
+.area-table th[scope="row"] { text-align: left; font-weight: 550; color: var(--ink); }
+.area-table thead th {
+  position: sticky; top: 0;
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.area-table tbody tr { border-bottom: 1px solid var(--border); }
+.area-table td { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.area-table td b { color: var(--ink); font-weight: 650; }
+
+.menu-row {
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.menu-row:active { background: var(--wash); }
+.menu-row > svg { flex: 0 0 auto; width: 21px; height: 21px; fill: none; stroke: currentColor;
+                  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--ink-2); }
+.menu-row span { flex: 1 1 auto; min-width: 0; }
+.menu-row b { display: block; font-size: 15px; font-weight: 600; }
+.menu-row small { display: block; margin-top: 1px; color: var(--ink-muted); font-size: 12.5px; }
+.menu-go { flex: 0 0 auto; width: 16px; height: 16px; color: var(--ink-muted); stroke-width: 2; }
 
 .sheet-hint { margin: 12px 0 0; color: var(--ink-muted); font-size: 12.5px; line-height: 1.5; }
 .sheet-hint b { color: var(--ink-2); font-weight: 600; }
@@ -618,18 +709,63 @@ body[data-view="map"] { overflow: hidden; }
   position: fixed;
   z-index: 30;
   left: 0; right: 0; bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--plane) 90%, transparent);
+  padding: 6px 8px calc(4px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--plane) 92%, transparent);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
   border-top: 1px solid var(--border);
 }
 body.sheet-open .dock { display: none; }
 
-.dock-search { position: relative; flex: 1 1 auto; min-width: 0; }
+/* Labelled, not just iconographic. The previous version of this bar carried a
+   bare map glyph and the first thing it was asked was where the map had gone --
+   which is the same complaint this layout was built to answer elsewhere. */
+.dock-tabs { display: flex; align-items: stretch; gap: 4px; }
+
+.dock-tab {
+  flex: 1 1 0;
+  position: relative;
+  min-height: var(--tap);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: .005em;
+  cursor: pointer;
+}
+.dock-tab:active { background: var(--wash); }
+.dock-tab svg { width: 21px; height: 21px; fill: none; stroke: currentColor;
+                stroke-width: 1.85; stroke-linecap: round; stroke-linejoin: round; }
+.dock-tab[aria-pressed="true"], .dock-tab[aria-expanded="true"] { color: var(--accent); }
+.dock-tab .fab-list { display: none; }
+.dock-tab[aria-pressed="true"] .fab-list { display: block; }
+.dock-tab[aria-pressed="true"] .fab-map { display: none; }
+
+/* A filter or a search that is on but out of sight is the problem this whole
+   layout is fixing, so the tab says so. */
+.dock-dot {
+  position: absolute;
+  top: 3px; right: calc(50% - 17px);
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--plane);
+}
+.dock-dot[hidden] { display: none; }
+
+/* The field is summoned rather than permanent: four labelled tabs and a text
+   input do not both fit across 375px without the labels going first. */
+.dock-search { position: relative; display: flex; align-items: center; margin-bottom: 6px; }
+.dock-search[hidden] { display: none; }
 .dock-search .search-icon {
   position: absolute;
   left: 12px; top: 50%;
@@ -638,37 +774,18 @@ body.sheet-open .dock { display: none; }
   fill: none; stroke: var(--ink-muted); stroke-width: 2; stroke-linecap: round;
   pointer-events: none;
 }
-
-.dock-btn {
+.search-done {
   flex: 0 0 auto;
-  position: relative;
-  width: var(--tap); height: var(--tap);
-  display: grid; place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--ink);
+  min-height: var(--tap);
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
 }
-.dock-btn:active { background: var(--wash); }
-.dock-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor;
-                stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.dock-btn .fab-list { display: none; }
-.dock-btn[aria-pressed="true"] { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
-.dock-btn[aria-pressed="true"] .fab-list { display: block; }
-.dock-btn[aria-pressed="true"] .fab-map { display: none; }
-
-/* A filter that is on but out of sight is the problem this whole layout is
-   fixing, so say so on the button rather than only inside the sheet. */
-.dock-dot {
-  position: absolute;
-  top: 6px; right: 6px;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 2px var(--surface);
-}
-.dock-dot[hidden] { display: none; }
 
 .u-sr {
   position: absolute; width: 1px; height: 1px;
@@ -969,6 +1086,7 @@ body.sheet-open .dock { display: none; }
   box-shadow: var(--shadow);
   cursor: pointer;
 }
+.sethome[hidden], .crosshair[hidden] { display: none; }
 .sethome:active { background: var(--wash); }
 .sethome svg { width: 15px; height: 15px; fill: none; stroke: currentColor;
                stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }

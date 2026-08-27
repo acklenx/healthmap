@@ -47,14 +47,22 @@ const el = {
   sheetAddr: $("#sheet-addr"), sheetBody: $("#sheet-body"), favBtn: $("#fav-btn"),
   favLabel: $("#fav-label"), dirBtn: $("#dir-btn"),
   topbar: $(".topbar"), paneMap: $("#pane-map"), map: $("#map"), mapNote: $("#map-note"),
-  setHome: $("#sethome"),
+  setHome: $("#sethome"), crosshair: $("#crosshair"),
   viewToggle: $("#viewtoggle"), viewToggleLabel: $("#viewtoggle-label"),
   sheetScroll: $("#sheet .sheet-body"),
   sheetMap: $("#sheet-map"), sheetMapCanvas: $("#sheet-map-canvas"),
   sheetMapLink: $("#sheet-map-link"), sheetMapTag: $("#sheet-map-tag"),
-  sheetApprox: $("#sheet-approx"),
+  sheetApprox: $("#sheet-approx"), menuBtn: $("#menu-btn"),
   filterSheet: $("#filtersheet"), filterBtn: $("#filter-btn"), filterCount: $("#filter-count"),
   mapLocate: $("#map-locate"),
+  dockSearch: $("#dock-search"), searchBtn: $("#search-btn"), searchDone: $("#search-done"),
+  searchDot: $("#search-dot"),
+  moreSheet: $("#moresheet"), moreBtn: $("#more-btn"), moreFresh: $("#more-fresh"),
+  statsSheet: $("#statssheet"), statsBody: $("#stats-body"), statsScope: $("#stats-scope"),
+  shareSheet: $("#sharesheet"), shareQr: $("#share-qr"), shareLink: $("#share-link"),
+  shareSub: $("#share-sub"), shareCopy: $("#share-copy"), shareCopyLabel: $("#share-copy-label"),
+  shareNative: $("#share-native"),
+  menuLocSub: $("#menu-loc-sub"),
 };
 
 const locEl = {
@@ -183,6 +191,15 @@ const APPROX_ICON =
 function mapsUrl(p) {
   const q = `${p.name}, ${p.street}, ${p.city}, GA ${p.zip}`;
   return `https://maps.google.com/?q=${encodeURIComponent(q)}`;
+}
+
+/* The health department publishes a name and an address and nothing else -- no
+ * website, no menu, no phone. So this is a web search, not a link, and the
+ * button says "Look up" rather than "Website" because promising a homepage the
+ * data does not contain is how you end up on somebody else's. */
+function lookupUrl(p) {
+  const q = `${p.name} ${p.city} GA restaurant menu`;
+  return `https://duckduckgo.com/?q=${encodeURIComponent(q)}`;
 }
 
 function titleCase(s) {
@@ -429,6 +446,245 @@ function closeLocationSheet() {
 }
 
 /* ---- filter and sort sheet ---------------------------------------------- */
+
+/* One place that knows a sheet is open, so the dock and the scroll lock cannot
+ * drift out of step with each other. */
+function setSheet(node, open, trigger) {
+  node.hidden = !open;
+  if (trigger) trigger.setAttribute("aria-expanded", String(open));
+  document.body.classList.toggle("sheet-open", open);
+}
+
+/* ---- search ------------------------------------------------------------- */
+
+function openSearch() {
+  el.dockSearch.hidden = false;
+  el.searchBtn.setAttribute("aria-expanded", "true");
+  el.search.focus();
+}
+
+/** Collapse the field, but only when it is empty -- hiding a live query would
+ *  leave the list filtered by something invisible. */
+function closeSearch() {
+  if (el.search.value.trim()) { el.search.blur(); return; }
+  el.dockSearch.hidden = true;
+  el.searchBtn.setAttribute("aria-expanded", "false");
+}
+
+function syncSearchDot() {
+  el.searchDot.hidden = !state.query.trim();
+}
+
+/* ---- shareable state ---------------------------------------------------- */
+
+/* A link that reopens what is on screen now.
+ *
+ * A place gets ?p=<id>. Otherwise the link carries where the list is sorted
+ * from and what is filtered, because "here, with the U's showing" is the thing
+ * worth handing to someone -- not the app's front page. */
+function shareUrl() {
+  const url = new URL(location.origin + location.pathname);
+  if (state.open) {
+    url.searchParams.set("p", state.open.id);
+    return url.toString();
+  }
+  if (state.home) {
+    url.searchParams.set("at", `${state.home.lat.toFixed(5)},${state.home.lon.toFixed(5)}`);
+    if (state.home.label) url.searchParams.set("label", state.home.label);
+  }
+  if (state.filter !== "all") url.searchParams.set("show", state.filter);
+  if (state.grades.size < GRADE_BANDS.length) url.searchParams.set("g", [...state.grades].join(""));
+  if (state.sort !== "dist") url.searchParams.set("by", state.sort);
+  if (state.query.trim()) url.searchParams.set("q", state.query.trim());
+  if (document.body.dataset.view === "map") url.searchParams.set("view", "map");
+  return url.toString();
+}
+
+/** Restore whatever a shared link was carrying. Anything unparseable is
+ *  ignored rather than fatal -- a mangled link should still open the app. */
+function applyShareState() {
+  const q = new URLSearchParams(location.search);
+  if (!q.toString()) return;
+
+  const at = q.get("at");
+  if (at && /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(at)) {
+    const [lat, lon] = at.split(",").map(Number);
+    state.home = { lat, lon, label: q.get("label") || "a shared link", pinned: true };
+  }
+  const show = q.get("show");
+  if (show === "fav") state.filter = show;
+
+  const g = q.get("g");
+  if (g) {
+    const letters = [...g.toUpperCase()].filter((c) => GRADE_BANDS.some((b) => b.letter === c));
+    if (letters.length) state.grades = new Set(letters);
+  }
+  const by = q.get("by");
+  if (["dist", "recent", "worst"].includes(by)) state.sort = by;
+
+  const query = q.get("q");
+  if (query) { state.query = query; el.search.value = query; el.dockSearch.hidden = false; }
+
+  if (q.get("view") === "map") state.pendingView = "map";
+  // ?p= comes from a shared link, ?place= from a push notification.
+  const p = Number(q.get("p") || q.get("place"));
+  if (p) state.pendingPlace = p;
+
+  // Leave the address bar clean; the state is in memory now.
+  history.replaceState(null, "", location.pathname);
+}
+
+/* ---- share -------------------------------------------------------------- */
+
+let qrLib = null;
+const loadQr = () => (qrLib ||= import("/qr.js"));
+
+async function openShareSheet() {
+  const url = shareUrl();
+  el.shareSub.textContent = state.open
+    ? state.open.name
+    : "Whatever the list is showing right now";
+  el.shareLink.textContent = url;
+  el.shareQr.innerHTML = "<p>Building the code…</p>";
+  el.shareNative.hidden = !navigator.share;
+  el.shareCopyLabel.textContent = "Copy link";
+  setSheet(el.shareSheet, true);
+
+  try {
+    const { encode, toSvg } = await loadQr();
+    el.shareQr.innerHTML = toSvg(encode(url));
+  } catch {
+    // The link itself is right there to be copied, so this is a downgrade
+    // rather than a failure.
+    el.shareQr.innerHTML = "<p>Couldn’t draw the code — copy the link instead.</p>";
+  }
+}
+
+function closeShareSheet() { setSheet(el.shareSheet, false); }
+
+/* ---- scores in this area ------------------------------------------------ */
+
+/** Mean, spread and grade counts over whatever the list is currently showing. */
+function summarise(rows) {
+  const scores = [];
+  const grades = { A: 0, B: 0, C: 0, U: 0 };
+  for (const p of rows) {
+    if (!p.latest) continue;
+    scores.push(p.latest.score);
+    grades[gradeFor(p.latest.score)] += 1;
+  }
+  const n = scores.length;
+  if (!n) return { n: 0, grades };
+  const mean = scores.reduce((a, b) => a + b, 0) / n;
+  // Population, not sample: this is every score in the set, not a draw from it.
+  const sd = Math.sqrt(scores.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+  const sorted = scores.slice().sort((a, b) => a - b);
+  const mid = n >> 1;
+  const median = n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return { n, mean, sd, median, min: sorted[0], max: sorted[n - 1], grades };
+}
+
+/** The same summary, cut by city or ZIP. Areas with only a handful of places
+ *  are left out: an average of three is noise, and ranking on it invites a
+ *  conclusion the data cannot support. */
+const AREA_MIN = 12;
+
+function byArea(rows, key) {
+  const buckets = new Map();
+  for (const p of rows) {
+    if (!p.latest) continue;
+    const k = (key === "zip" ? p.zip : p.city) || "—";
+    const bucket = buckets.get(k);
+    if (bucket) bucket.push(p);
+    else buckets.set(k, [p]);
+  }
+  return [...buckets]
+    .map(([name, members]) => ({ name, ...summarise(members) }))
+    .filter((a) => a.n >= AREA_MIN)
+    .sort((a, b) => b.mean - a.mean);
+}
+
+function statsHTML(rows) {
+  const s = summarise(rows);
+  if (!s.n) return `<p class="empty">No scored places in this selection.</p>`;
+
+  const bars = GRADE_BANDS.map((band) => {
+    const n = s.grades[band.letter];
+    const pct = (n / s.n) * 100;
+    return `<div class="dist-row">
+      <span class="dist-key" data-g="${band.letter}">${band.letter}</span>
+      <span class="dist-track"><span class="dist-fill" data-g="${band.letter}" style="width:${pct.toFixed(1)}%"></span></span>
+      <span class="dist-n">${n.toLocaleString()}<small>${pct.toFixed(0)}%</small></span>
+    </div>`;
+  }).join("");
+
+  const areaRows = (key) => byArea(rows, key).map((a) => `<tr>
+      <th scope="row">${escapeHTML(titleCase(String(a.name)))}</th>
+      <td><b>${a.mean.toFixed(1)}</b></td>
+      <td>${a.sd.toFixed(1)}</td>
+      <td>${a.n.toLocaleString()}</td>
+    </tr>`).join("");
+
+  const cities = areaRows("city");
+  const zips = areaRows("zip");
+
+  return `
+    <div class="stat-grid">
+      <div class="stat"><b>${s.mean.toFixed(1)}</b><small>Average score</small></div>
+      <div class="stat"><b>${s.median.toFixed(0)}</b><small>Median</small></div>
+      <div class="stat"><b>±${s.sd.toFixed(1)}</b><small>Std deviation</small></div>
+      <div class="stat"><b>${s.n.toLocaleString()}</b><small>Places scored</small></div>
+    </div>
+    <p class="sheet-hint">Two thirds of scores fall within one standard deviation of
+      the average — here, roughly ${Math.max(0, s.mean - s.sd).toFixed(0)} to
+      ${Math.min(100, s.mean + s.sd).toFixed(0)}. Lowest on record in this
+      selection is ${s.min}, highest is ${s.max}.</p>
+
+    <h3 class="sec-title">How many at each grade</h3>
+    <div class="dist">${bars}</div>
+
+    ${cities ? `<h3 class="sec-title">By city</h3>
+      <div class="table-wrap"><table class="area-table">
+        <thead><tr><th scope="col">Place</th><th scope="col">Avg</th><th scope="col">SD</th><th scope="col">N</th></tr></thead>
+        <tbody>${cities}</tbody></table></div>` : ""}
+
+    ${zips ? `<h3 class="sec-title">By ZIP</h3>
+      <div class="table-wrap"><table class="area-table">
+        <thead><tr><th scope="col">ZIP</th><th scope="col">Avg</th><th scope="col">SD</th><th scope="col">N</th></tr></thead>
+        <tbody>${zips}</tbody></table></div>` : ""}
+
+    <p class="sheet-hint">Areas with fewer than ${AREA_MIN} scored places are left out —
+      an average over a handful of restaurants is noise, and ranking on it would
+      invite a conclusion the data cannot support.</p>`;
+}
+
+function openStatsSheet() {
+  const rows = state.view;
+  const scope = [];
+  if (state.query.trim()) scope.push(`matching “${state.query.trim()}”`);
+  if (state.filter === "fav") scope.push("saved only");
+  if (state.grades.size < GRADE_BANDS.length) scope.push(`grades ${[...state.grades].join(", ")}`);
+  el.statsScope.textContent = scope.length
+    ? `${rows.length.toLocaleString()} places — ${scope.join(", ")}`
+    : `All ${rows.length.toLocaleString()} places on record`;
+  el.statsBody.innerHTML = statsHTML(rows);
+  el.statsBody.scrollTop = 0;
+  setSheet(el.statsSheet, true);
+}
+
+function closeStatsSheet() { setSheet(el.statsSheet, false); }
+
+/* ---- the More menu ------------------------------------------------------ */
+
+function openMoreSheet() {
+  el.menuLocSub.textContent = state.home
+    ? state.home.label || "Set to your current location"
+    : "Not set — the list isn't sorted by distance";
+  el.moreFresh.textContent = el.freshness.textContent;
+  setSheet(el.moreSheet, true, el.moreBtn);
+}
+
+function closeMoreSheet() { setSheet(el.moreSheet, false, el.moreBtn); }
 
 function openFilterSheet() {
   el.filterSheet.hidden = false;
@@ -826,7 +1082,7 @@ function setMapNote(inFrame, drawn, saved = 0) {
       if (saved) parts.push("Saved places always show.");
     }
     if (!state.home) {
-      parts.push("No home set — pan the crosshair where you want and tap “Save this as home”.");
+      parts.push("No home set — move the map to where you are and tap “Sort from here”.");
     }
   }
   const text = parts.join(" ");
@@ -838,6 +1094,7 @@ function setMapNote(inFrame, drawn, saved = 0) {
  *  it is the same act as typing a ZIP — just done by hand. */
 function syncHomeMarker({ recenter = false } = {}) {
   if (!mapReady) return;
+  queueMicrotask(syncSearchHere);
   const home = state.home;
 
   if (!home) {
@@ -908,10 +1165,32 @@ function saveCentreAsHome() {
   setHome(c.lat, c.lng, "Home");
   setSort("dist");
   el.setHome.classList.add("is-done");
-  setTimeout(() => el.setHome.classList.remove("is-done"), 1100);
+  setTimeout(() => {
+    el.setHome.classList.remove("is-done");
+    syncSearchHere();
+  }, 1100);
 }
 
 el.setHome.addEventListener("click", saveCentreAsHome);
+
+/* Offer to re-sort from here only once "here" is somewhere else.
+ *
+ * The control used to sit on the map permanently, along with the crosshair
+ * aiming it -- which reads as an instruction on a screen you opened to look at
+ * pins. It has something to say when the map has been moved away from wherever
+ * the list is currently sorted from, and nothing to say before that. */
+const SEARCH_HERE_M = 400;
+
+function syncSearchHere() {
+  if (!mapReady) return;
+  const c = map.getCenter();
+  const far = !state.home ||
+    distanceMiles(state.home.lat, state.home.lon, c.lat, c.lng) * 1609.34 > SEARCH_HERE_M;
+  el.setHome.hidden = !far;
+  el.crosshair.hidden = !far;
+  el.setHome.querySelector("span").textContent =
+    state.home ? "Search from here" : "Sort from here";
+}
 
 async function ensureMap() {
   if (mapReady) return true;
@@ -939,12 +1218,13 @@ async function ensureMap() {
   else if (bounds) map.fitBounds(bounds, { padding: [24, 24] });
   else map.setView([33.95, -84.4], 10);            // the three counties, roughly
 
-  map.on("moveend", syncPins);
+  map.on("moveend", () => { syncPins(); syncSearchHere(); });
   mapReady = true;
 
   syncHomeMarker();
   syncGpsMarker();
   syncPins();
+  syncSearchHere();
   return true;
 }
 
@@ -1142,6 +1422,7 @@ function openSheet(id) {
   // pin in the street, which matters for anything inside a mall or plaza.
   el.sheetAddr.href = mapsUrl(p);
   el.dirBtn.href = mapsUrl(p);
+  el.menuBtn.href = lookupUrl(p);
   showApproxNote(p);
   syncFavButton();
 
@@ -1367,8 +1648,52 @@ document.querySelectorAll("[data-grade]").forEach((b) =>
 );
 
 el.filterBtn.addEventListener("click", openFilterSheet);
-// One locate behaviour, two places to reach it.
+// One locate behaviour, three places to reach it.
 el.mapLocate.addEventListener("click", () => el.locate.click());
+
+el.searchBtn.addEventListener("click", () =>
+  el.dockSearch.hidden ? openSearch() : closeSearch()
+);
+el.searchDone.addEventListener("click", () => {
+  el.search.value = "";
+  state.query = "";
+  state.shown = PAGE;
+  syncSearchDot();
+  render();
+  closeSearch();
+});
+
+el.moreBtn.addEventListener("click", openMoreSheet);
+el.moreSheet.addEventListener("click", (e) => {
+  if (e.target.closest("[data-close]") || e.target.closest("#more-close")) closeMoreSheet();
+});
+$("#menu-loc").addEventListener("click", () => { closeMoreSheet(); openLocationSheet(); });
+$("#menu-stats").addEventListener("click", () => { closeMoreSheet(); openStatsSheet(); });
+$("#menu-share").addEventListener("click", () => { closeMoreSheet(); openShareSheet(); });
+el.shareSheet.addEventListener("click", (e) => {
+  if (e.target.closest("[data-close]") || e.target.closest("#share-close")) closeShareSheet();
+});
+el.shareCopy.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(el.shareLink.textContent);
+    el.shareCopyLabel.textContent = "Copied";
+    setTimeout(() => { el.shareCopyLabel.textContent = "Copy link"; }, 1600);
+  } catch {
+    el.shareCopyLabel.textContent = "Press and hold the link to copy";
+  }
+});
+el.shareNative.addEventListener("click", () => {
+  navigator.share?.({
+    title: state.open ? state.open.name : "Score",
+    text: state.open
+      ? `${state.open.name} — health inspection scores`
+      : "Health inspection scores near here",
+    url: el.shareLink.textContent,
+  }).catch(() => {});
+});
+el.statsSheet.addEventListener("click", (e) => {
+  if (e.target.closest("[data-close]") || e.target.closest("#stats-close")) closeStatsSheet();
+});
 el.filterSheet.addEventListener("click", (e) => {
   if (e.target.closest("[data-close]") || e.target.closest("#filter-close")) closeFilterSheet();
 });
@@ -1379,6 +1704,7 @@ el.search.addEventListener("input", () => {
   searchTimer = setTimeout(() => {
     state.query = el.search.value;
     state.shown = PAGE;
+    syncSearchDot();
     render();
   }, 120);
 });
@@ -1472,6 +1798,9 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   closeLocationSheet();
   closeFilterSheet();
+  closeMoreSheet();
+  closeStatsSheet();
+  closeShareSheet();
   closeSheet();
 });
 
@@ -1487,8 +1816,22 @@ new IntersectionObserver((entries) => {
 
 /* ------------------------------------------------------------------ go --- */
 
+applyShareState();
+
 document.body.dataset.view = state.pane;
 if (state.home) setLocateState("on", state.home.label || "Near you");
+// A shared link can carry any of these, and it arrives after the controls were
+// first drawn -- so bring all of them back in line with the state, not just the
+// ones the local session can change.
+document.querySelectorAll("[data-sort]").forEach((b) =>
+  b.classList.toggle("is-on", b.dataset.sort === state.sort)
+);
+document.querySelectorAll("[data-filter]").forEach((b) =>
+  b.classList.toggle("is-on", b.dataset.filter === state.filter)
+);
+syncGradeChips();
+syncFilterDot();
+syncSearchDot();
 
 loadData().then(() => {
   // Wide screens show both panes at once, so the map is built as soon as there
@@ -1498,12 +1841,10 @@ loadData().then(() => {
   // A stored fix sorts the list instantly; then quietly refresh it.
   requestLocation({ silent: !!state.home });
 
-  // Arriving from a notification (/?place=123) opens that restaurant directly.
-  const deepLink = Number(new URLSearchParams(location.search).get("place"));
-  if (deepLink) {
-    openSheet(deepLink);
-    history.replaceState(history.state, "", location.pathname);
-  }
+  // A shared link, or a tapped notification, opens straight onto its place.
+  if (state.pendingView === "map") setPane("map");
+  if (state.pendingPlace) openSheet(state.pendingPlace);
+  state.pendingPlace = state.pendingView = null;
 });
 
 // Tapping a notification while the app is already open.

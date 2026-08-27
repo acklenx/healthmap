@@ -163,6 +163,35 @@ a broken app rather than as a filter.
 On the map view the header hides entirely and the map runs to the edges, since
 the map is the whole point of that view.
 
+### The rest of it
+
+**More** holds what isn't a filter, a search or a view, because those features
+were otherwise things you had to already know about.
+
+*Scores in this area* summarises whatever the list is currently showing —
+average, median, standard deviation, the count at each grade, and the same cut
+by city and by ZIP. Areas with fewer than 12 scored places are left out: an
+average over a handful of restaurants is noise, and ranking on it invites a
+conclusion the data cannot support.
+
+*Share* builds a link that reopens what is on screen — a restaurant becomes
+`?p=<id>`, otherwise the link carries where the list is sorted from and what is
+filtered — and draws it as a QR code. `web/public/qr.js` is a QR encoder written
+for this, byte mode at error-correction level M, versions 1 to 10. A library
+would have been a CDN request the content policy blocks or another vendored
+dependency; this is about two hundred lines, and every version round-trips
+through an independent decoder in testing.
+
+*Look up* on a restaurant is honestly a web search, not a link. The health
+department publishes a name and an address and nothing else — no website, no
+menu, no phone — so promising a homepage the data does not contain is how you
+end up on somebody else's.
+
+**Sort from here** appears on the map only once the map has been moved away from
+wherever the list is currently sorted from. It used to sit there permanently
+with a crosshair aiming it, which reads as an instruction on a screen you opened
+to look at pins.
+
 ## Running it locally
 
 ```bash
