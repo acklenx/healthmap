@@ -21,7 +21,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "ac3bf833", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "0c773f2b", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -314,6 +314,17 @@ function setHome(lat, lon, label, { pinned = true, recenter = false } = {}) {
   state.shown = PAGE;
   render();
   syncHomeMarker({ recenter });
+}
+
+/** Auto-locate only where the permission is already granted. */
+async function maybeRefreshLocation() {
+  try {
+    const status = await navigator.permissions?.query({ name: "geolocation" });
+    if (status?.state !== "granted") return;
+  } catch {
+    return;                       // no Permissions API: wait to be asked
+  }
+  requestLocation({ silent: true });
 }
 
 function requestLocation({ silent = false, adopt = false, onFail, onSuccess } = {}) {
@@ -1844,8 +1855,14 @@ loadData().then(() => {
   // is something to put on it rather than waiting for a toggle that isn't there.
   syncPaneLayout();
 
-  // A stored fix sorts the list instantly; then quietly refresh it.
-  requestLocation({ silent: !!state.home });
+  // Refresh the stored fix, but only for someone who has already said yes.
+  //
+  // Asking for a location the moment the page opens is a prompt with no
+  // context behind it, and the browser shows it before the app has had a
+  // chance to explain why it wants one. Checking the permission first means
+  // the request only ever happens where it has already been granted; everyone
+  // else gets the nudge in the status line and taps "Near you" when ready.
+  maybeRefreshLocation();
 
   // A shared link, or a tapped notification, opens straight onto its place.
   if (state.pendingView === "map") setPane("map");

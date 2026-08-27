@@ -1,0 +1,8 @@
+# Everything here is a public record already, and the point of the project is
+# that people can find these scores. The API routes are excluded because they
+# are per-request proxies, not pages: crawling them would fetch tens of
+# thousands of inspection reports one at a time to no one's benefit.
+
+User-agent: *
+Allow: /
+Disallow: /api/

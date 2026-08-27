@@ -21,9 +21,6 @@
 /version.json
   Cache-Control: no-cache
 
-/manifest.webmanifest
-  Cache-Control: no-cache
-
 # Stamped by scripts/stamp_assets.py. Safe to keep forever: the id changes with
 # the contents, so a stale copy is a copy of a URL nobody asks for any more.
 /app.js
@@ -35,11 +32,20 @@
 /qr.js
   Cache-Control: public, max-age=31536000, immutable
 
+/manifest.webmanifest
+  Cache-Control: public, max-age=31536000, immutable
+
 /vendor/*
   Cache-Control: public, max-age=31536000, immutable
 
 /icons/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Only ever fetched when a browser offers to install the app, so a week-old
+# copy costs nothing. Not stamped for the same reason -- it is not worth a
+# bucket of its own to save a request nobody makes twice.
+/screenshots/*
+  Cache-Control: public, max-age=604800
 
 # Requested as places.json?v=<generated>, stamped by the crawler rather than by
 # stamp_assets.py -- it changes on a different schedule to the app.

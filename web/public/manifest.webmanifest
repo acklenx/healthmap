@@ -8,11 +8,83 @@
   "orientation": "portrait",
   "background_color": "#f9f9f7",
   "theme_color": "#fcfcfb",
-  "categories": ["food", "utilities", "health"],
+  "categories": [
+    "food",
+    "utilities",
+    "health"
+  ],
   "icons": [
-    { "src": "/icons/icon-192.png?cache-id=2290448a", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png?cache-id=2290448a", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icons/icon-maskable-512.png?cache-id=2290448a", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/icon.svg?cache-id=2290448a", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "/icons/icon-192.png?cache-id=2290448a",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png?cache-id=2290448a",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png?cache-id=2290448a",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon.svg?cache-id=2290448a",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "id": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/narrow-list.webp",
+      "sizes": "412x915",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "The places closest to you, with their latest score"
+    },
+    {
+      "src": "/screenshots/narrow-map.webp",
+      "sizes": "412x915",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "The same rows on a map, clustered where they crowd"
+    },
+    {
+      "src": "/screenshots/wide-list.webp",
+      "sizes": "1280x800",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "List and map side by side on a wider screen"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Saved places",
+      "short_name": "Saved",
+      "url": "/?show=fav",
+      "description": "The restaurants you have saved"
+    },
+    {
+      "name": "Map",
+      "short_name": "Map",
+      "url": "/?view=map",
+      "description": "Open straight onto the map"
+    },
+    {
+      "name": "Worst scores nearby",
+      "short_name": "Worst",
+      "url": "/?by=worst",
+      "description": "Sorted by lowest score first"
+    }
   ]
 }

@@ -38,7 +38,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 PUB = ROOT / "web" / "public"
 
 BUCKETS = {
-    "app": ["app.js", "styles.css", "qr.js"],
+    "app": ["app.js", "styles.css", "qr.js", "manifest.webmanifest"],
     "vendor": [
         "vendor/leaflet/leaflet.js",
         "vendor/leaflet/leaflet.css",
@@ -56,10 +56,12 @@ BUCKETS = {
     ],
 }
 
-# app.js carries the stamps it is hashed with, so the line is normalised out
-# before hashing -- otherwise writing the hash changes the hash.
+# Some bucket members carry the stamps they are hashed with -- app.js holds the
+# CACHE_ID constant, the manifest holds stamped icon URLs. Both are normalised
+# out before hashing, or writing the hash would change the hash.
 STAMP_LINE = re.compile(r'^const CACHE_ID = \{.*?\};$', re.M)
 STAMP_PLACEHOLDER = 'const CACHE_ID = {};'
+STAMP_QUERY = re.compile(r'\?cache-id=[0-9a-f]+')
 
 
 def digest(bucket):
@@ -69,8 +71,11 @@ def digest(bucket):
         if not path.exists():
             sys.exit("stamp_assets: missing %s" % rel)
         blob = path.read_bytes()
-        if rel == "app.js":
-            blob = STAMP_LINE.sub(STAMP_PLACEHOLDER, blob.decode("utf-8")).encode("utf-8")
+        if rel in ("app.js", "styles.css", "qr.js", "manifest.webmanifest"):
+            text = blob.decode("utf-8")
+            text = STAMP_LINE.sub(STAMP_PLACEHOLDER, text)
+            text = STAMP_QUERY.sub("", text)
+            blob = text.encode("utf-8")
         h.update(rel.encode("utf-8"))
         h.update(blob)
     return h.hexdigest()[:8]

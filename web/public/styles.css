@@ -9,17 +9,24 @@
   --plane:        #f9f9f7;
   --ink:          #0b0b0b;
   --ink-2:        #52514e;
-  --ink-muted:    #898781;
+  --ink-muted:    #6f6d66;
   --grid:         #e1e0d9;
   --axis:         #c3c2b7;
   --border:       rgba(11, 11, 11, .10);
   --shadow:       0 1px 2px rgba(11,11,11,.05), 0 8px 24px rgba(11,11,11,.07);
-  --accent:       #2a78d6;
-  --accent-wash:  rgba(42, 120, 214, .10);
+  /* Nudged down from #2a78d6, which was 4.19:1 on the page background -- the
+     footer's source link is 12.5px, and small text needs 4.5. Dark mode's
+     accent already clears it. */
+  --accent:       #2670cc;
+  --accent-wash:  rgba(38, 112, 204, .10);
   --wash:         rgba(11, 11, 11, .045);
 
-  /* status palette — fixed, never themed */
-  --grade-a: #0ca30c;
+  /* Status palette — fixed, never themed.
+     A is darker than it looks like it wants to be: the score under the letter
+     is 10px, which needs 4.5:1, and white on a brighter green tops out at
+     3.35. The letter alone would have been fine; the number is what sets the
+     floor, and dropping the number was never an option. */
+  --grade-a: #088408;
   --grade-b: #fab219;
   --grade-c: #ec835a;
   --grade-u: #d03b3b;
@@ -219,7 +226,7 @@ main { padding: 0 14px; }
   color: #fff;
   letter-spacing: -.01em;
 }
-.badge small { display: block; font-size: 10px; font-weight: 600; opacity: .92; margin-top: 2px; letter-spacing: 0; }
+.badge small { display: block; font-size: 10px; font-weight: 600; margin-top: 2px; letter-spacing: 0; }
 .badge[data-g="A"] { background: var(--grade-a); }
 .badge[data-g="B"] { background: var(--grade-b); color: #0b0b0b; }
 .badge[data-g="C"] { background: var(--grade-c); color: #0b0b0b; }
@@ -284,6 +291,13 @@ main { padding: 0 14px; }
 .card-star { width: 13px; height: 13px; fill: currentColor; stroke: none; color: var(--ink-muted); vertical-align: -1px; margin-right: 3px; }
 
 .sentinel { height: 1px; }
+
+/* Hold the page's full height until there are rows to hold it.
+   Otherwise the footer renders just under the header, then the first batch of
+   cards arrives and shoves it a screen and a half down the page -- which was
+   the entire cumulative layout shift on mobile. :empty stops applying the
+   moment the first row is appended, so nothing has to remember to undo it. */
+#list:empty { display: block; min-height: 100dvh; }
 
 .foot {
   margin: 26px 0 0;

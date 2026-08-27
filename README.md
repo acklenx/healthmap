@@ -336,6 +336,43 @@ week. It cannot simply be ignored — the crawler diffs against the previous
 `store.json` to work out what changed and who to alert. If it ever gets
 uncomfortable, squash the data history or move the store to an R2 bucket.
 
+## Installing it
+
+It is a PWA: `manifest.webmanifest` plus the service worker, so a browser will
+offer to add it to the home screen and it launches standalone and works offline
+from there. The manifest carries screenshots and long-press shortcuts — saved
+places, straight to the map, worst scores first — so the install prompt has
+something to show and the icon has somewhere to go.
+
+## What Lighthouse says
+
+Accessibility, best practices and SEO are 100. Three things had to change to get
+there, and each was a real defect rather than a score to game:
+
+**The score inside a grade badge failed contrast.** White at `.92` opacity on
+the A green was 3.06:1 against a 4.5 requirement for 10px text — and even at
+full opacity that green only reached 3.35. `--grade-a` is darker now. The letter
+alone would have passed; the number underneath it is what set the floor.
+
+**The footer was the entire cumulative layout shift.** It rendered just below
+the header while the list was empty, then the first batch of rows arrived and
+shoved it a screen and a half down the page. `#list:empty { min-height: 100dvh }`
+holds the space until there are rows to hold it, and stops applying by itself.
+
+**Geolocation was requested on load.** That is a permission prompt with no
+context behind it, shown before the app has had a chance to say why it wants
+one. It now checks `navigator.permissions` first and only calls the API where
+the answer is already yes; everyone else gets the nudge in the status line and
+taps *Near you* when they are ready.
+
+`robots.txt` was also missing, so the SPA fallback was answering that request
+with `index.html` — 342 parse errors, and a straight fail on the SEO audit.
+
+The remaining best-practices findings are Cloudflare's, not the app's: the bot
+challenge script at `/cdn-cgi/challenge-platform/` uses three deprecated APIs
+and ships with a four-hour cache lifetime. Turning off Bot Fight Mode removes
+them.
+
 ## Reading the scores fairly
 
 A score is one inspector's snapshot of one visit, not a running verdict — a 71
