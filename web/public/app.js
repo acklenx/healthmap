@@ -53,6 +53,8 @@ const el = {
   sheetMap: $("#sheet-map"), sheetMapCanvas: $("#sheet-map-canvas"),
   sheetMapLink: $("#sheet-map-link"), sheetMapTag: $("#sheet-map-tag"),
   sheetApprox: $("#sheet-approx"),
+  filterSheet: $("#filtersheet"), filterBtn: $("#filter-btn"), filterCount: $("#filter-count"),
+  mapLocate: $("#map-locate"),
 };
 
 const locEl = {
@@ -71,6 +73,10 @@ const state = {
   home: readJSON(KEY.pos, null),
   gps: null,
   filter: "all",
+  // Which grades to draw. A set rather than one of "A only"/"B or worse",
+  // because "just the U's" is a real thing to want to look at and those two
+  // canned options could not express it.
+  grades: new Set(["A", "B", "C", "U"]),
   sort: "dist",
   query: "",
   shown: PAGE,
@@ -128,6 +134,23 @@ function formatDate(iso) {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, {
     month: "short", day: "numeric", year: "numeric",
   });
+}
+
+/* How old the score is, for the list row.
+ *
+ * "Jun 9, 2026" answers a question nobody is asking while scrolling. The one
+ * they are asking is whether the grade is current, and an age answers it in a
+ * third of the width -- which is what lets the distance be the loudest thing
+ * in the column when the list is sorted by distance. The exact date is still
+ * on every inspection in the sheet. */
+function inspectionAge(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const months = Math.max(0, Math.round((Date.now() - new Date(y, m - 1, d)) / 2.628e9));
+  if (months < 1) return "this month";
+  if (months === 1) return "1 mo ago";
+  if (months < 12) return `${months} mo ago`;
+  const years = Math.floor(months / 12);
+  return years === 1 ? "1 yr ago" : `${years} yr ago`;
 }
 
 function relativeTime(iso) {
@@ -249,6 +272,7 @@ function applyPayload(payload) {
 
 function setLocateState(mode, label) {
   el.locate.dataset.state = mode;
+  el.mapLocate.dataset.state = mode;      // the map's copy shows the same state
   el.locateLabel.textContent = label;
 }
 
@@ -404,6 +428,52 @@ function closeLocationSheet() {
   document.body.classList.remove("sheet-open");
 }
 
+/* ---- filter and sort sheet ---------------------------------------------- */
+
+function openFilterSheet() {
+  el.filterSheet.hidden = false;
+  el.filterBtn.setAttribute("aria-expanded", "true");
+  document.body.classList.add("sheet-open");
+}
+
+function closeFilterSheet() {
+  el.filterSheet.hidden = true;
+  el.filterBtn.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("sheet-open");
+}
+
+/* A filter you cannot see is the thing this layout set out to fix, so the
+ * button says when one is on. Sort is not counted: there is always exactly one,
+ * so a dot for it would be lit permanently and mean nothing. */
+function syncFilterDot() {
+  el.filterCount.hidden =
+    state.filter === "all" && state.grades.size === GRADE_BANDS.length;
+}
+
+/* Grades are a toggle set, not a choice of one. The last one on cannot be
+ * turned off -- an empty set shows nothing, which reads as a broken app rather
+ * than a filter, and there is no affordance on that screen to explain it. */
+function toggleGrade(letter) {
+  if (state.grades.has(letter)) {
+    if (state.grades.size === 1) return;
+    state.grades.delete(letter);
+  } else {
+    state.grades.add(letter);
+  }
+  state.shown = PAGE;
+  syncGradeChips();
+  syncFilterDot();
+  render();
+}
+
+function syncGradeChips() {
+  document.querySelectorAll("[data-grade]").forEach((b) => {
+    const on = state.grades.has(b.dataset.grade);
+    b.classList.toggle("is-on", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+}
+
 function locMsg(text, isError) {
   locEl.msg.textContent = text;
   locEl.msg.classList.toggle("is-error", !!isError);
@@ -420,10 +490,12 @@ function computeView() {
 
   if (state.filter === "fav") {
     rows = rows.filter((p) => state.favorites.has(p.id));
-  } else if (state.filter === "A") {
-    rows = rows.filter((p) => p.latest && p.latest.score >= 90);
-  } else if (state.filter === "bad") {
-    rows = rows.filter((p) => p.latest && p.latest.score < 90);
+  }
+
+  if (state.grades.size < GRADE_BANDS.length) {
+    rows = rows.filter((p) =>
+      p.latest && state.grades.has(gradeFor(p.latest.score))
+    );
   }
 
   if (terms.length) {
@@ -468,7 +540,9 @@ function cardHTML(p) {
       <span class="card-name">${star}${escapeHTML(p.name)}</span>
       <span class="card-sub">${escapeHTML(p.street)}, ${escapeHTML(p.city)}</span>
     </span>
-    <span class="card-meta">${dist}${latest ? formatDate(latest.date) : ""}</span>
+    <span class="card-meta">${dist}<span class="card-age">${
+      latest ? `Scored ${inspectionAge(latest.date)}` : "Never scored"
+    }</span></span>
   </button></li>`;
 }
 
@@ -493,7 +567,9 @@ function render({ recompute = true } = {}) {
       ? `No restaurants match “${state.query}”.`
       : state.filter === "fav"
         ? "Nothing saved yet. Open a restaurant and tap Save."
-        : "Nothing matches those filters.";
+        : state.grades.size < GRADE_BANDS.length
+          ? `No ${[...state.grades].join(", ")} scores here. Turn more grades on, or move the map.`
+          : "Nothing matches those filters.";
   }
   if (state.sort === "dist" && !state.home && state.places.length) {
     el.status.hidden = false;
@@ -523,6 +599,7 @@ let homeMarker = null;
 let gpsMarker = null;
 let mapReady = false;
 const pins = new Map();          // place id -> the marker currently drawn for it
+const clusters = new Map();      // grid cell key -> the cluster marker for it
 
 function loadLeaflet() {
   if (window.L) return Promise.resolve(window.L);
@@ -603,21 +680,42 @@ const pinSignature = (p) =>
   `${p.latest ? p.latest.score : "-"}|${state.favorites.has(p.id) ? 1 : 0}` +
   `|${state.open?.id === p.id ? 1 : 0}`;
 
+/* Pins that land within CELL px of each other are drawn as one.
+ *
+ * A county view puts thousands of places on screen and downtown Marietta alone
+ * stacks a dozen markers into a pile no thumb can pick apart -- the pin under
+ * the others is unreachable at any zoom below street level. Grid clustering in
+ * screen space rather than a plugin: Leaflet is vendored here on purpose, and
+ * this is forty lines against another library to keep in step with it.
+ *
+ * The cluster stays deliberately neutral. Colour in this app means a grade, and
+ * a bag of places does not have one -- writing the worst score on it would read
+ * as a verdict on all of them. */
+const CELL = 52;                 // a shade under twice the 28px pin
+
+function clusterIcon(n) {
+  return L.divIcon({
+    className: "pin-wrap",
+    html: `<span class="pin-cluster"><b>${n}</b></span>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
+}
+
 /** Draw the rows the list is showing — but only those in frame, and at most
- *  MAX_PINS of them. A metro-wide view can hold thousands of places and a
- *  marker each would jam the main thread on a phone. state.view is already
- *  sorted, so the cap keeps the nearest (or newest, or lowest — whichever sort
- *  is on) rather than an arbitrary slice, and the note below says what was left
- *  out instead of dropping it silently. */
+ *  MAX_PINS markers. state.view is already sorted, so the cap keeps the nearest
+ *  (or newest, or lowest — whichever sort is on) rather than an arbitrary
+ *  slice, and the note below says what was left out instead of dropping it
+ *  silently. */
 function syncPins() {
   if (!mapReady) return;
   const b = map.getBounds().pad(0.12);
   const south = b.getSouth(), north = b.getNorth();
   const west = b.getWest(), east = b.getEast();
 
-  // Saved places are exempt from the cap. There are only ever a handful, and
-  // seeing all of them at once is the main reason to zoom out in the first
-  // place; letting the sort order push them off the map defeats the feature.
+  // Saved places are exempt from the cap and from clustering. There are only
+  // ever a handful, and seeing all of them at once is the main reason to zoom
+  // out in the first place; letting them be swallowed defeats the feature.
   const saved = [];
   const rest = [];
   let inFrame = 0;
@@ -625,9 +723,30 @@ function syncPins() {
     if (p.lat < south || p.lat > north || p.lon < west || p.lon > east) continue;
     inFrame += 1;
     if (state.favorites.has(p.id)) saved.push(p);
-    else if (rest.length < MAX_PINS) rest.push(p);
+    else rest.push(p);
   }
-  const wanted = saved.concat(rest.slice(0, Math.max(0, MAX_PINS - saved.length)));
+
+  // Bucket by where each pin actually lands on screen, so the grid follows the
+  // zoom without anything having to be recomputed when it changes.
+  const cells = new Map();
+  for (const p of rest) {
+    const pt = map.latLngToLayerPoint([p.lat, p.lon]);
+    const key = `${Math.floor(pt.x / CELL)}:${Math.floor(pt.y / CELL)}`;
+    const cell = cells.get(key);
+    if (cell) cell.push(p);
+    else cells.set(key, [p]);
+  }
+
+  const singles = [];
+  const groups = [];
+  for (const [key, members] of cells) {
+    if (members.length === 1) singles.push(members[0]);
+    else groups.push([key, members]);
+  }
+
+  const budget = Math.max(0, MAX_PINS - saved.length - groups.length);
+  const wanted = saved.concat(singles.slice(0, budget));
+  const shown = wanted.length + groups.reduce((n, [, m]) => n + m.length, 0);
 
   const keep = new Set();
   for (const p of wanted) {
@@ -657,7 +776,42 @@ function syncPins() {
     pins.delete(id);
   }
 
-  setMapNote(inFrame, wanted.length, saved.length);
+  const keepCells = new Set();
+  for (const [key, members] of groups) {
+    keepCells.add(key);
+    const existing = clusters.get(key);
+    if (existing && existing._n === members.length) continue;
+    if (existing) pinLayer.removeLayer(existing);
+
+    let lat = 0, lon = 0;
+    for (const m of members) { lat += m.lat; lon += m.lon; }
+    const marker = L.marker([lat / members.length, lon / members.length], {
+      icon: clusterIcon(members.length),
+      title: `${members.length} places here — tap to zoom in`,
+      keyboard: false,
+    });
+    marker._n = members.length;
+    // Zoom to what is inside rather than by a fixed step: one level is not
+    // enough to break up a tight pile, and three overshoots a loose one.
+    marker.on("click", () => {
+      const bounds = L.latLngBounds(members.map((m) => [m.lat, m.lon]));
+      if (bounds.getNorth() === bounds.getSouth() && bounds.getEast() === bounds.getWest()) {
+        map.setView(bounds.getCenter(), Math.min(map.getZoom() + 3, 19));
+      } else {
+        map.fitBounds(bounds, { padding: [48, 48], maxZoom: 18 });
+      }
+    });
+    marker.addTo(pinLayer);
+    clusters.set(key, marker);
+  }
+
+  for (const [key, marker] of clusters) {
+    if (keepCells.has(key)) continue;
+    pinLayer.removeLayer(marker);
+    clusters.delete(key);
+  }
+
+  setMapNote(inFrame, shown, saved.length);
 }
 
 function setMapNote(inFrame, drawn, saved = 0) {
@@ -1189,8 +1343,17 @@ function setFilter(filter) {
   document.querySelectorAll("[data-filter]").forEach((b) =>
     b.classList.toggle("is-on", b.dataset.filter === filter)
   );
+  syncFilterDot();
   render();
 }
+
+// The starting sort was never marked as chosen. Invisible while the controls
+// were a chip row that scrolled off the edge; in a labelled sheet it reads as
+// "no sort applied".
+document.querySelectorAll("[data-sort]").forEach((b) =>
+  b.classList.toggle("is-on", b.dataset.sort === state.sort)
+);
+syncFilterDot();
 
 document.querySelectorAll("[data-filter]").forEach((b) =>
   b.addEventListener("click", () => setFilter(b.dataset.filter))
@@ -1198,6 +1361,17 @@ document.querySelectorAll("[data-filter]").forEach((b) =>
 document.querySelectorAll("[data-sort]").forEach((b) =>
   b.addEventListener("click", () => setSort(b.dataset.sort))
 );
+
+document.querySelectorAll("[data-grade]").forEach((b) =>
+  b.addEventListener("click", () => toggleGrade(b.dataset.grade))
+);
+
+el.filterBtn.addEventListener("click", openFilterSheet);
+// One locate behaviour, two places to reach it.
+el.mapLocate.addEventListener("click", () => el.locate.click());
+el.filterSheet.addEventListener("click", (e) => {
+  if (e.target.closest("[data-close]") || e.target.closest("#filter-close")) closeFilterSheet();
+});
 
 let searchTimer;
 el.search.addEventListener("input", () => {
@@ -1297,6 +1471,7 @@ el.favBtn.addEventListener("click", () => {
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   closeLocationSheet();
+  closeFilterSheet();
   closeSheet();
 });
 

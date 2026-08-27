@@ -19,7 +19,10 @@
 
 <header class="topbar">
   <div class="topbar-row">
-    <h1>Score</h1>
+    <div>
+      <h1>Score</h1>
+      <p class="topbar-sub">Health inspections · Cobb · Cherokee · Fulton</p>
+    </div>
     <button id="locate" class="locate" type="button" aria-label="Use my location">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/>
@@ -27,28 +30,6 @@
       </svg>
       <span id="locate-label">Locate me</span>
     </button>
-  </div>
-
-  <div class="search-wrap">
-    <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8 21 21"/>
-    </svg>
-    <input id="search" type="search" placeholder="Search a restaurant" autocomplete="off"
-           spellcheck="false" enterkeyhint="search" aria-label="Search restaurants by name">
-  </div>
-
-  <div class="chips" role="group" aria-label="Filter">
-    <button class="chip is-on" data-filter="all" type="button">All</button>
-    <button class="chip" data-filter="fav" type="button">
-      <svg class="chip-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="m12 3.6 2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85Z"/>
-      </svg>Saved</button>
-    <button class="chip" data-filter="A" type="button">A only</button>
-    <button class="chip" data-filter="bad" type="button">B or worse</button>
-    <span class="chips-sep" aria-hidden="true"></span>
-    <button class="chip" data-sort="dist" type="button">Nearest</button>
-    <button class="chip" data-sort="recent" type="button">Newest</button>
-    <button class="chip" data-sort="worst" type="button">Lowest</button>
   </div>
 </header>
 
@@ -76,6 +57,16 @@
       </svg>
     </div>
 
+    <!-- The header carries "Near you", and the header is hidden on this view --
+         so the map needs its own. Top right: Leaflet's zoom sits top left, and
+         the bottom belongs to the dock and the home button. -->
+    <button id="map-locate" class="map-locate" type="button" aria-label="Use my location">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/>
+        <path d="M12 1.6v3M12 19.4v3M1.6 12h3M19.4 12h3"/>
+      </svg>
+    </button>
+
     <button id="sethome" class="sethome" type="button">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M3.6 10.4 12 3.6l8.4 6.8"/><path d="M5.8 12.2V20h12.4v-7.8"/>
@@ -87,15 +78,36 @@
   </div>
 </main>
 
-<button id="viewtoggle" class="viewfab" type="button" aria-pressed="false">
-  <svg class="fab-map" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <path d="M9 3.6 3 6v14.4l6-2.4 6 2.4 6-2.4V3.6l-6 2.4Z"/><path d="M9 3.6v14.4M15 6v14.4"/>
-  </svg>
-  <svg class="fab-list" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <path d="M4 6.5h16M4 12h16M4 17.5h16"/>
-  </svg>
-  <span id="viewtoggle-label">Map</span>
-</button>
+<!-- Everything you reach for while standing outside a restaurant, in the part
+     of the screen a thumb actually reaches. The header above scrolls away; this
+     does not. -->
+<nav class="dock" aria-label="Search, filter and view">
+  <div class="dock-search">
+    <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8 21 21"/>
+    </svg>
+    <input id="search" type="search" placeholder="Search a restaurant" autocomplete="off"
+           spellcheck="false" enterkeyhint="search" aria-label="Search restaurants by name">
+  </div>
+
+  <button id="filter-btn" class="dock-btn" type="button" aria-haspopup="dialog"
+          aria-expanded="false" aria-label="Filter and sort">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 7h16M7 12h10M10 17h4"/>
+    </svg>
+    <span id="filter-count" class="dock-dot" hidden></span>
+  </button>
+
+  <button id="viewtoggle" class="dock-btn" type="button" aria-pressed="false">
+    <svg class="fab-map" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 3.6 3 6v14.4l6-2.4 6 2.4 6-2.4V3.6l-6 2.4Z"/><path d="M9 3.6v14.4M15 6v14.4"/>
+    </svg>
+    <svg class="fab-list" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 6.5h16M4 12h16M4 17.5h16"/>
+    </svg>
+    <span id="viewtoggle-label" class="u-sr">Map</span>
+  </button>
+</nav>
 
 <footer class="foot">
   <p>Data from the <a href="https://ga.healthinspections.us/georgia/" rel="noopener">Georgia Department of Public Health</a>.
@@ -145,6 +157,52 @@
         </a>
       </div>
       <div id="sheet-body" class="sheet-sections"></div>
+    </div>
+  </section>
+</div>
+
+<!-- Filter and sort. These were a horizontally scrolling chip row in the
+     header, which hid 189px of itself off the right edge on a 375px screen --
+     every sort option included. A sheet has room to label them and to give
+     each control a full 44px target. -->
+<div id="filtersheet" class="sheet" hidden>
+  <div class="sheet-scrim" data-close></div>
+  <section class="sheet-panel sheet-compact" role="dialog" aria-modal="true" aria-labelledby="filter-title">
+    <div class="sheet-grab" data-close></div>
+    <div class="sheet-head">
+      <div><h2 id="filter-title">Filter and sort</h2></div>
+      <button id="filter-close" class="icon-btn" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <h3 class="sec-title">Show</h3>
+      <div class="chips" role="group" aria-label="Filter">
+        <button class="chip is-on" data-filter="all" type="button">All</button>
+        <button class="chip" data-filter="fav" type="button">
+          <svg class="chip-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="m12 3.6 2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85Z"/>
+          </svg>Saved</button>
+      </div>
+
+      <h3 class="sec-title">Grades</h3>
+      <div class="chips" role="group" aria-label="Grades">
+        <button class="chip chip-grade is-on" data-grade="A" type="button" aria-pressed="true"><i data-g="A"></i>A</button>
+        <button class="chip chip-grade is-on" data-grade="B" type="button" aria-pressed="true"><i data-g="B"></i>B</button>
+        <button class="chip chip-grade is-on" data-grade="C" type="button" aria-pressed="true"><i data-g="C"></i>C</button>
+        <button class="chip chip-grade is-on" data-grade="U" type="button" aria-pressed="true"><i data-g="U"></i>U</button>
+      </div>
+      <p class="sheet-hint">A 90–100 · B 80–89 · C 70–79 · U below 70.
+        Turn any of them off; at least one stays on.</p>
+
+      <h3 class="sec-title">Order by</h3>
+      <div class="chips" role="group" aria-label="Sort">
+        <button class="chip" data-sort="dist" type="button">Nearest</button>
+        <button class="chip" data-sort="recent" type="button">Newest</button>
+        <button class="chip" data-sort="worst" type="button">Lowest score</button>
+      </div>
+      <p class="sheet-hint">Nearest measures from your home pin. Drag it on the map,
+        or set it with <b>Near you</b> at the top of the list.</p>
     </div>
   </section>
 </div>

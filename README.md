@@ -112,12 +112,21 @@ The list is the app; the map is a second view of the same rows. Whatever the
 filters and the sort have decided, both draw it — turn on "B or worse" and the
 map thins out to match.
 
-On a phone the two swap, via the pill at the bottom of the screen. From 980px
-wide there is room for both, so the pill disappears and they sit side by side.
+On a phone the two swap, from the dock at the bottom of the screen. From 980px
+wide there is room for both, so they sit side by side and the switch goes away.
 
 **Your location is a pin you can drag.** Dropping it somewhere else re-sorts the
 whole app from there, exactly as typing a ZIP code does — useful for looking up
 where you are going rather than where you are.
+
+**Pins that land within 52px of each other are drawn as one.** A county view can
+put thousands of places on screen, and downtown Marietta alone stacks a dozen
+markers into a pile where the ones underneath cannot be tapped at all. The
+clustering is a grid in screen space rather than a plugin — Leaflet is vendored
+here deliberately, and forty lines keeps step with that better than another
+library would. A cluster is a count and nothing else: colour means a grade
+everywhere else in the app, and writing the worst score in a group onto its
+marker would read as a verdict on all of them.
 
 **Tiles come from OpenStreetMap** — no key, no account, no build step. Leaflet
 is vendored into `web/public/vendor/` rather than pulled from a CDN, so the app
@@ -129,6 +138,30 @@ county-wide view can contain thousands and a marker each will jam a phone; the
 caption says how many were left out rather than dropping them quietly. And it
 has no offline basemap — tiles you have already looked at are kept, but new
 ground needs a connection. The list keeps working either way.
+
+### Reaching it one-handed
+
+The app is used standing up, one-handed, outside somewhere. So the controls are
+at the bottom, in a dock: search, filter and sort, and the list/map switch. The
+header above it is identity rather than chrome and scrolls away with the
+content.
+
+That is the reverse of where this started. Search, seven filter chips and the
+locate button used to live in a sticky header 150px tall — 22% of a 375×667
+screen, held forever, in the hardest part of the screen for a thumb to reach.
+The chip row was also 189px wider than the screen, which hid every sort option
+past the right edge with nothing to say they were there. They are labelled
+sections in a sheet now, and each control gets the full 44px target this
+stylesheet had been asking for in `--tap` all along.
+
+The grades became a toggle set at the same time. "A only" and "B or worse" were
+the only two ways to filter by score, and neither could express "just show me
+the U's" — which is, reliably, the first thing anyone wants to do here. A, B, C
+and U are independent now; at least one stays on, because an empty list reads as
+a broken app rather than as a filter.
+
+On the map view the header hides entirely and the map runs to the edges, since
+the map is the whole point of that view.
 
 ## Running it locally
 
