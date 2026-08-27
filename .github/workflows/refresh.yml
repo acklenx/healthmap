@@ -104,3 +104,14 @@ jobs:
               -H "Content-Type: application/json" \
               --data @/tmp/notify.json
           fi
+
+      # Deliberately last. verify_data.py measures the *aggregate* share of
+      # placed addresses, which the geocode cache dominates, so a total Census
+      # outage passes every check it makes while new establishments quietly
+      # stop getting coordinates. This asks five addresses with known answers.
+      #
+      # It runs after the commit and the deploy on purpose: a sick geocoder is
+      # worth going red over, but it is not a reason to withhold a good set of
+      # inspection scores that has already been crawled and verified.
+      - name: Geocoder health check
+        run: python3 scripts/check_geocoder.py

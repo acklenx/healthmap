@@ -11,23 +11,52 @@ list; only its distance is fuzzier.
 
 Precision levels, highest to lowest:
     2  exact rooftop/street-range match
-    1  match after stripping a suite/unit designator
+    1  matched after stripping a suite/unit, or by the one-line parser
     0  ZIP centroid fallback
+
+Misses are cached too. The batch endpoint is strict about locality -- it will
+reject an otherwise valid row because DPH filed it under "SANDY SPRINGS" where
+the Census street range is recorded against Atlanta -- so a slice of addresses
+never matches no matter how often it is asked. Without a negative cache those
+accumulate and get resubmitted on every crawl forever. They are recorded with a
+miss count and an escalating retry delay instead, because the answer *can*
+change: the reference data gains new construction a couple of times a year.
 """
 
 import csv
+import hashlib
 import io
 import json
 import os
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 ENDPOINT = "https://geocoding.geo.census.gov/geocoder/locations/addressbatch"
+ONELINE = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"
 BENCHMARK = "Public_AR_Current"
 BATCH = 4000          # well under the 10k ceiling; keeps requests responsive
 MAX_ATTEMPTS = 3
+
+# How long to wait before asking about an address that missed, by how many
+# times it has now missed. The reference data only changes a couple of times a
+# year, so retrying monthly is a dozen futile round trips for two real chances.
+MISS_BACKOFF_DAYS = (90, 180, 365)
+
+# The one-line pass costs a request per address, so bound it. Anything over the
+# cap simply waits for the next run -- it is logged, never dropped silently.
+MAX_ONELINE = 400
+
+# Metro Atlanta. A geocoder should not return anything outside this for an
+# address the crawler collected; if it does, the match is wrong, not precise.
+BBOX_LAT = (33.4, 34.6)
+BBOX_LON = (-85.2, -84.0)
+
+
+def in_metro(lat, lon):
+    return BBOX_LAT[0] <= lat <= BBOX_LAT[1] and BBOX_LON[0] <= lon <= BBOX_LON[1]
 
 # Suite/unit designators confuse the street-range matcher more often than they
 # help, so we retry without them.
@@ -88,8 +117,11 @@ def _post_batch(rows, log=print):
             log("    geocoder retry %d/%d: %s" % (attempt + 1, MAX_ATTEMPTS, exc))
             time.sleep(5 * (attempt + 1))
     else:
+        # None, not {} -- callers must not read "the service never answered"
+        # as "none of these addresses exist", or an outage poisons the cache
+        # with negative entries for every address in the batch.
         log("    geocoder batch failed permanently: %s" % last)
-        return {}
+        return None
 
     found = {}
     for row in csv.reader(io.StringIO(text)):
@@ -102,6 +134,39 @@ def _post_batch(rows, log=print):
             continue
         found[row[0]] = (round(lat, 6), round(lon, 6))
     return found
+
+
+def _oneline(street, city, zipcode, log=print):
+    """Geocode a single address through the one-line endpoint.
+
+    The batch endpoint matches on parsed fields and rejects the row outright
+    when the locality disagrees with its street file. The one-line endpoint
+    parses the whole string and is markedly more forgiving: on the addresses
+    batch has already rejected it recovers roughly one in five. The city and
+    ZIP are still sent, so a hit is confirmed by its own locality rather than
+    inferred, which is what makes it trustworthy enough to treat as precise.
+
+    One request per address, so callers should bound how many they attempt.
+    """
+    addr = "%s, %s, GA %s" % (street, city, zipcode)
+    query = urllib.parse.urlencode(
+        {"address": addr, "benchmark": BENCHMARK, "format": "json"}
+    )
+    try:
+        with urllib.request.urlopen("%s?%s" % (ONELINE, query), timeout=20) as resp:
+            matches = json.load(resp)["result"]["addressMatches"]
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError,
+            ValueError, KeyError) as exc:
+        log("    one-line lookup failed for %s: %s" % (addr, exc))
+        return None
+    if not matches:
+        return None
+    coords = matches[0]["coordinates"]
+    lat, lon = round(coords["y"], 6), round(coords["x"], 6)
+    if not in_metro(lat, lon):
+        # A street of the same name in another part of the state.
+        return None
+    return lat, lon
 
 
 class GeocodeCache:
@@ -123,7 +188,37 @@ class GeocodeCache:
         return re.sub(r"\s+", " ", ("%s|%s|%s" % (street, city, zipcode)).upper()).strip()
 
     def get(self, street, city, zipcode):
-        return self.entries.get(self.key(street, city, zipcode))
+        """Return a coordinate entry, or None. Negative entries are not hits."""
+        entry = self.entries.get(self.key(street, city, zipcode))
+        return entry if entry and "lat" in entry else None
+
+    def miss_is_fresh(self, key, now=None):
+        """True while a recorded miss is still within its backoff window.
+
+        The delay is spread by a hash of the address so that a batch of misses
+        recorded on the same night does not all come due on the same night
+        months later -- otherwise the retries arrive as one herd and the "new
+        addresses" line in the log becomes noise once a quarter.
+        """
+        entry = self.entries.get(key)
+        if not entry or "lat" in entry:
+            return False
+        now = time.time() if now is None else now
+        step = min(max(entry.get("miss", 1), 1), len(MISS_BACKOFF_DAYS)) - 1
+        base = MISS_BACKOFF_DAYS[step]
+        spread = max(base // 4, 1)
+        jitter = int(hashlib.sha1(key.encode("utf-8")).hexdigest()[:8], 16) % spread
+        return now < entry.get("t", 0) + (base + jitter) * 86400
+
+    def record_miss(self, key, now=None):
+        """Note that an address did not match, escalating its retry delay."""
+        prev = self.entries.get(key) or {}
+        if "lat" in prev:
+            return
+        self.entries[key] = {
+            "miss": prev.get("miss", 0) + 1,
+            "t": int(time.time() if now is None else now),
+        }
 
     def save(self):
         tmp = self.path + ".tmp"
@@ -157,33 +252,61 @@ def resolve(places, cache, log=print):
     strip malls, and airport terminals especially -- so addresses are geocoded
     once and the result applied to every establishment at that address.
     """
-    pending = {}
+    now = time.time()
+    pending, deferred = {}, 0
     for p in places:
         hit = cache.get(p["street"], p["city"], p["zip"])
         if hit:
             p["lat"], p["lon"], p["precision"] = hit["lat"], hit["lon"], hit["q"]
             continue
-        if p["street"] and p["city"]:
-            pending.setdefault(cache.key(p["street"], p["city"], p["zip"]), []).append(p)
+        if not (p["street"] and p["city"]):
+            continue
+        key = cache.key(p["street"], p["city"], p["zip"])
+        if cache.miss_is_fresh(key, now):
+            deferred += 1
+            continue
+        pending.setdefault(key, []).append(p)
 
+    if deferred:
+        log("  %d establishments held back: address missed before, not due yet"
+            % deferred)
+
+    healthy = True
     if pending:
-        log("  geocoding %d new addresses (%d establishments)"
+        log("  geocoding %d addresses (%d establishments)"
             % (len(pending), sum(len(v) for v in pending.values())))
         items = list(pending.items())
 
         # Pass 1: the address exactly as published.
-        got = _run_pass(items, cache, precision=2, transform=lambda s: s, log=log)
+        got, healthy = _run_pass(items, cache, 2, lambda s: s, log)
 
         # Pass 2: retry the misses without suite/unit designators.
         # Track what *this run* resolved rather than testing for a "lat" key --
         # a place can be carrying coordinates from an earlier run (a ZIP
         # centroid, or a since-changed address) and still need another attempt.
-        misses = [(k, p) for k, p in items if k not in got]
-        if misses:
+        misses = [(k, g) for k, g in items if k not in got]
+        if misses and healthy:
             log("  retrying %d without suite/unit designators" % len(misses))
-            _run_pass(misses, cache, precision=1, transform=strip_unit, log=log)
+            got2, healthy = _run_pass(misses, cache, 1, strip_unit, log)
+            misses = [(k, g) for k, g in misses if k not in got2]
 
-    # Pass 3: anything still unplaced falls back to its ZIP centroid.
+        # Pass 3: the one-line endpoint, which tolerates the locality
+        # disagreements that make the batch endpoint reject a whole row.
+        if misses and healthy:
+            misses = _oneline_pass(misses, cache, log)
+
+        # Record what genuinely did not match, so it is not asked about nightly
+        # forever. Never do this on the back of a failed request: an outage
+        # would otherwise silence every address for a quarter.
+        if healthy:
+            for key, _ in misses:
+                cache.record_miss(key, now)
+            if misses:
+                cache.save()
+        elif misses:
+            log("  geocoder unhealthy -- not recording %d misses" % len(misses))
+
+    # Pass 4: anything still unplaced falls back to its ZIP centroid.
     centroids = _zip_centroids(cache)
     unplaced = [p for p in places if "lat" not in p]
     for p in unplaced:
@@ -199,9 +322,43 @@ def resolve(places, cache, log=print):
     return places
 
 
+def _oneline_pass(items, cache, log=print):
+    """One request per address. Returns the entries that were tried and missed.
+
+    Anything beyond MAX_ONELINE is left untouched -- not tried, and so not
+    recorded as a miss either -- and simply comes round again next run.
+    """
+    attempt, overflow = items[:MAX_ONELINE], items[MAX_ONELINE:]
+    if overflow:
+        log("  one-line pass: %d addresses, capped at %d (%d wait for next run)"
+            % (len(items), MAX_ONELINE, len(overflow)))
+    else:
+        log("  one-line pass: %d addresses" % len(attempt))
+
+    missed, hits = [], 0
+    for key, group in attempt:
+        p = group[0]
+        found = _oneline(p["street"], p["city"], p["zip"], log=log)
+        if not found:
+            missed.append((key, group))
+            continue
+        lat, lon = found
+        for q in group:
+            q["lat"], q["lon"], q["precision"] = lat, lon, 1
+        cache.entries[key] = {"lat": lat, "lon": lon, "q": 1}
+        hits += 1
+    log("    one-line: %d/%d matched" % (hits, len(attempt)))
+    if hits:
+        cache.save()
+    return missed
+
+
 def _run_pass(items, cache, precision, transform, log):
-    """Geocode a batch of (cache-key, [places]) pairs. Returns the keys resolved."""
-    resolved = set()
+    """Geocode a batch of (cache-key, [places]) pairs.
+
+    Returns (keys resolved, whether the endpoint actually answered).
+    """
+    resolved, healthy = set(), True
     for start in range(0, len(items), BATCH):
         chunk = items[start : start + BATCH]
         rows = []
@@ -209,6 +366,9 @@ def _run_pass(items, cache, precision, transform, log):
             p = group[0]  # every place in the group has the same address
             rows.append((str(n), transform(p["street"]), p["city"], "GA", p["zip"]))
         found = _post_batch(rows, log=log)
+        if found is None:
+            healthy = False
+            break
         for n, (key, group) in enumerate(chunk):
             hit = found.get(str(n))
             if not hit:
@@ -222,4 +382,4 @@ def _run_pass(items, cache, precision, transform, log):
             % (start + 1, start + len(chunk), len(found), len(chunk))
         )
         cache.save()
-    return resolved
+    return resolved, healthy

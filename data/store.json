@@ -305,10 +305,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.75926,
+   "lon": -84.387659,
    "name": "Sweet Georgia's Juke Joint Main Bar",
-   "precision": 0,
+   "precision": 1,
    "street": "200 PEACHTREE ST",
    "zip": "30309"
   },
@@ -344,10 +344,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.75926,
+   "lon": -84.387659,
    "name": "Sweet Georgia Juke Joint Kitchen",
-   "precision": 0,
+   "precision": 1,
    "street": "200 PEACHTREE ST",
    "zip": "30309"
   },
@@ -383,10 +383,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.75926,
+   "lon": -84.387659,
    "name": "Sweet Georgia Juke Joint Service Bar",
-   "precision": 0,
+   "precision": 1,
    "street": "200 PEACHTREE ST",
    "zip": "30309"
   },
@@ -1026,10 +1026,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.813889,
-   "lon": -84.565548,
+   "lat": 33.816728,
+   "lon": -84.568197,
    "name": "TACO HUT",
-   "precision": 0,
+   "precision": 1,
    "street": "477 VETERANS MEMORIAL HWY BLDG 1",
    "zip": "30126"
   },
@@ -3336,10 +3336,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.784504,
+   "lon": -84.389941,
    "name": "Tin Lizzy Cantina Midtown",
-   "precision": 0,
+   "precision": 1,
    "street": "77 12TH ST STE 6A",
    "zip": "30309"
   },
@@ -8873,10 +8873,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.939487,
-   "lon": -84.607831,
+   "lat": 33.916838,
+   "lon": -84.585239,
    "name": "POPEYES",
-   "precision": 0,
+   "precision": 1,
    "street": "1101 POWDER SPRINGS ST",
    "zip": "30064"
   },
@@ -12439,10 +12439,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Vieux Carre Bistro",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE SW STE 113",
    "zip": "30303"
   },
@@ -15002,10 +15002,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.754977,
-   "lon": -84.418893,
+   "lat": 33.753346,
+   "lon": -84.417614,
    "name": "Salaam South Bakery",
-   "precision": 0,
+   "precision": 1,
    "street": "19 JOSEPH E. LOWERY BLVD",
    "zip": "30314"
   },
@@ -17005,10 +17005,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.939487,
-   "lon": -84.607831,
+   "lat": 33.91625,
+   "lon": -84.586775,
    "name": "LOLITA'S PARLOUR - BASE",
-   "precision": 0,
+   "precision": 1,
    "street": "1147 POWDER SPRINGS ST STE 2B",
    "zip": "30064"
   },
@@ -28187,10 +28187,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 34.00703,
-   "lon": -84.621851,
+   "lat": 33.999553,
+   "lon": -84.599394,
    "name": "GAINES PARK SENIOR LIVING",
-   "precision": 0,
+   "precision": 1,
    "street": "1740 OLD 41 HWY NW",
    "zip": "30152"
   },
@@ -30725,10 +30725,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.752969,
+   "lon": -84.385746,
    "name": "Loudermilk Conference Center",
-   "precision": 0,
+   "precision": 1,
    "street": "40 COURTLAND STREET",
    "zip": "30303"
   },
@@ -32882,10 +32882,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754363,
+   "lon": -84.372462,
    "name": "Cafe Circa",
-   "precision": 0,
+   "precision": 1,
    "street": "464 EDGEWOOD AVE",
    "zip": "30312"
   },
@@ -34929,10 +34929,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754247,
+   "lon": -84.37226,
    "name": "Eats by A Ma Maniere",
-   "precision": 0,
+   "precision": 1,
    "street": "479 EDGEWOOD AVE STE 400",
    "zip": "30312"
   },
@@ -35787,10 +35787,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.793408,
+   "lon": -84.38431,
    "name": "Divan Restaurant- Bar",
-   "precision": 0,
+   "precision": 1,
    "street": "87 17TH ST",
    "zip": "30309"
   },
@@ -37710,10 +37710,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.752969,
+   "lon": -84.385746,
    "name": "United Way - Red Feather Cafe",
-   "precision": 0,
+   "precision": 1,
    "street": "40 COURTLAND ST",
    "zip": "30303"
   },
@@ -38986,10 +38986,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.672071,
-   "lon": -84.45802,
+   "lat": 33.655416,
+   "lon": -84.499542,
    "name": "Courtyard By Marriott",
-   "precision": 0,
+   "precision": 1,
    "street": "3400 CREEK POINTE DR",
    "zip": "30344"
   },
@@ -40928,10 +40928,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Rawesome Juicery",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE",
    "zip": "30303"
   },
@@ -53564,10 +53564,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.83918,
-   "lon": -84.37781,
+   "lat": 33.837528,
+   "lon": -84.384958,
    "name": "WQEB 97.3",
-   "precision": 0,
+   "precision": 1,
    "street": "3060 PHARR CT NW",
    "zip": "30305"
   },
@@ -54966,10 +54966,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.562891,
-   "lon": -84.593422,
+   "lat": 33.566741,
+   "lon": -84.58056,
    "name": "Lady Fannie Mae's Ultimate Fish Fry, Inc.",
-   "precision": 0,
+   "precision": 1,
    "street": "22 WEST BROAD ST",
    "zip": "30213"
   },
@@ -55818,10 +55818,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.83918,
-   "lon": -84.37781,
+   "lat": 33.843466,
+   "lon": -84.372003,
    "name": "Blue Donkey Coffee",
-   "precision": 0,
+   "precision": 1,
    "street": "3280 PEACHTREE RD STE 140 A & B",
    "zip": "30305"
   },
@@ -56153,10 +56153,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Earl of Sandwich- Municipal Market",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE STE 110",
    "zip": "30303"
   },
@@ -61085,10 +61085,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.83918,
-   "lon": -84.37781,
+   "lat": 33.819205,
+   "lon": -84.37578,
    "name": "The Hungry Peach Cafe",
-   "precision": 0,
+   "precision": 1,
    "street": "351 PEACHTREE HILLS STE 232",
    "zip": "30305"
   },
@@ -62577,10 +62577,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.754977,
-   "lon": -84.418893,
+   "lat": 33.753346,
+   "lon": -84.417614,
    "name": "Local Green Atlanta (Base of Operation)",
-   "precision": 0,
+   "precision": 1,
    "street": "19 JOSEPH E. LOWERY BLVD",
    "zip": "30314"
   },
@@ -66181,10 +66181,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "VIEUX CARRE BISTRO (BASE OF OPERATIONS)",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE SW STE 113",
    "zip": "30303"
   },
@@ -66210,10 +66210,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "VIEUX CARRE BISTRO(MOBILE)",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE SW STE 113",
    "zip": "30303"
   },
@@ -66988,10 +66988,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.755512,
+   "lon": -84.389579,
    "name": "YATAI",
-   "precision": 0,
+   "precision": 1,
    "street": "63 BROAD ST",
    "zip": "30303"
   },
@@ -68115,10 +68115,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.813889,
-   "lon": -84.565548,
+   "lat": 33.812993,
+   "lon": -84.545566,
    "name": "YEAH MAN RESTAURANT",
-   "precision": 0,
+   "precision": 1,
    "street": "302 VETERANS MEMORIAL HWY UNIT 156",
    "zip": "30126"
   },
@@ -68499,10 +68499,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.706468,
-   "lon": -84.38819,
+   "lat": 33.736377,
+   "lon": -84.387808,
    "name": "Cava- Summerhill",
-   "precision": 0,
+   "precision": 1,
    "street": "572 HANK AARON DR UNIT 4120",
    "zip": "30315"
   },
@@ -70726,10 +70726,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754309,
+   "lon": -84.376442,
    "name": "Fin & Feathers Edgewood",
-   "precision": 0,
+   "precision": 1,
    "street": "345 EDGEWOOD AVE",
    "zip": "30312"
   },
@@ -71683,10 +71683,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.758302,
+   "lon": -84.382279,
    "name": "Bar Services LLC DBA Atlanta Eagle",
-   "precision": 0,
+   "precision": 1,
    "street": "1492 PIEDMONT AVE STE f",
    "zip": "30309"
   },
@@ -72630,10 +72630,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.754977,
-   "lon": -84.418893,
+   "lat": 33.754657,
+   "lon": -84.416416,
    "name": "MR. EVERYTHING SUPER DELI",
-   "precision": 0,
+   "precision": 1,
    "street": "882 MARTIN LUTHER KING JR DR",
    "zip": "30314"
   },
@@ -73067,10 +73067,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.761901,
-   "lon": -84.357864,
+   "lat": 33.75435,
+   "lon": -84.366036,
    "name": "EMERALD CITY BAGELS LLC",
-   "precision": 0,
+   "precision": 1,
    "street": "678 EDGEWOOD AVE STE 01A",
    "zip": "30307"
   },
@@ -73354,10 +73354,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 34.039684,
-   "lon": -84.370536,
+   "lat": 34.031081,
+   "lon": -84.360747,
    "name": "Chill Latte 2",
-   "precision": 0,
+   "precision": 1,
    "street": "30 WOODSTOCK",
    "zip": "30075"
   },
@@ -73383,10 +73383,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 34.039684,
-   "lon": -84.370536,
+   "lat": 34.031081,
+   "lon": -84.360747,
    "name": "Chill Latte 3",
-   "precision": 0,
+   "precision": 1,
    "street": "30 WOODSTOCK",
    "zip": "30075"
   },
@@ -74948,10 +74948,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.813889,
-   "lon": -84.565548,
+   "lat": 33.818269,
+   "lon": -84.575241,
    "name": "KRYSTALS-MAR015",
-   "precision": 0,
+   "precision": 1,
    "street": "703 VETERANS MEMORIAL HWY",
    "zip": "30126"
   },
@@ -76145,10 +76145,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.778722,
-   "lon": -84.357151,
+   "lat": 33.774398,
+   "lon": -84.36362,
    "name": "BELEN DE LA CRUZ EMPANADAS & PASTRIES",
-   "precision": 0,
+   "precision": 1,
    "street": "725 PONCE DE LEON",
    "zip": "30306"
   },
@@ -79358,10 +79358,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.83918,
-   "lon": -84.37781,
+   "lat": 33.83866,
+   "lon": -84.380688,
    "name": "Intown Golf Club",
-   "precision": 0,
+   "precision": 1,
    "street": "3050 PEACHTREE RD STE 150",
    "zip": "30305"
   },
@@ -83573,10 +83573,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Mattchews",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE",
    "zip": "30303"
   },
@@ -84311,10 +84311,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.74097,
+   "lon": -84.41762,
    "name": "IRIE MON CAFE",
-   "precision": 0,
+   "precision": 1,
    "street": "530 JOSEPH E LOWERY UNIT 1C",
    "zip": "30309"
   },
@@ -86691,10 +86691,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.772861,
-   "lon": -84.378692,
+   "lat": 33.773816,
+   "lon": -84.389058,
    "name": "Door 64",
-   "precision": 0,
+   "precision": 1,
    "street": "64 3RD ST",
    "zip": "30308"
   },
@@ -87392,10 +87392,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.757151,
+   "lon": -84.388726,
    "name": "SPEAKEASY LOUNGE",
-   "precision": 0,
+   "precision": 1,
    "street": "156 FORSYTH ST UNIT B",
    "zip": "30303"
   },
@@ -89504,10 +89504,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.761901,
-   "lon": -84.357864,
+   "lat": 33.75435,
+   "lon": -84.366036,
    "name": "Chiringa",
-   "precision": 0,
+   "precision": 1,
    "street": "678 EDGEWOOD AVE STE 4",
    "zip": "30307"
   },
@@ -89848,10 +89848,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.719021,
-   "lon": -84.417769,
+   "lat": 33.733129,
+   "lon": -84.437518,
    "name": "Backyard Grill (Base)",
-   "precision": 0,
+   "precision": 1,
    "street": "816 CASCADE AVE",
    "zip": "30310"
   },
@@ -89877,10 +89877,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.719021,
-   "lon": -84.417769,
+   "lat": 33.733129,
+   "lon": -84.437518,
    "name": "Backyard Grill (Truck)",
-   "precision": 0,
+   "precision": 1,
    "street": "816 CASCADE AVE",
    "zip": "30310"
   },
@@ -94207,10 +94207,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 34.022039,
-   "lon": -84.511866,
+   "lat": 33.996122,
+   "lon": -84.547933,
    "name": "MEXICAN WING CITY",
-   "precision": 0,
+   "precision": 1,
    "street": "1750 BELLS FERRY RD STE E",
    "zip": "30066"
   },
@@ -95537,10 +95537,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.75255,
+   "lon": -84.384147,
    "name": "Chick-Fil-A",
-   "precision": 0,
+   "precision": 1,
    "street": "100 PIEDMONT AVE",
    "zip": "30303"
   },
@@ -100835,10 +100835,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.724924,
-   "lon": -84.51488,
+   "lat": 33.728435,
+   "lon": -84.504635,
    "name": "The Retreat at Cascade",
-   "precision": 0,
+   "precision": 1,
    "street": "1001 RESEARCH CENTER ATLANTA DR SW",
    "zip": "30331"
   },
@@ -100975,10 +100975,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.724924,
-   "lon": -84.51488,
+   "lat": 33.724746,
+   "lon": -84.510886,
    "name": "WNB Factory Cascade",
-   "precision": 0,
+   "precision": 1,
    "street": "1075 FAIRBURN RD SE STE 101",
    "zip": "30331"
   },
@@ -101091,10 +101091,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Bella Amour Chocolates & Desserts",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE STE 136",
    "zip": "30303"
   },
@@ -101991,10 +101991,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.672071,
-   "lon": -84.45802,
+   "lat": 33.655201,
+   "lon": -84.5004,
    "name": "HAMPTON INN AND SUITES",
-   "precision": 0,
+   "precision": 1,
    "street": "3450 CREEK POINTE DR",
    "zip": "30344"
   },
@@ -103282,10 +103282,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.754977,
-   "lon": -84.418893,
+   "lat": 33.763496,
+   "lon": -84.411138,
    "name": "Green Is Lyf",
-   "precision": 0,
+   "precision": 1,
    "street": "601 JOSEPH E BOONE",
    "zip": "30314"
   },
@@ -105338,10 +105338,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.83918,
-   "lon": -84.37781,
+   "lat": 33.841039,
+   "lon": -84.383617,
    "name": "Shoshin LLC",
-   "precision": 0,
+   "precision": 1,
    "street": "99 W PACES FERRY RD NE STE A",
    "zip": "30305"
   },
@@ -105700,10 +105700,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.724924,
-   "lon": -84.51488,
+   "lat": 33.754308,
+   "lon": -84.376381,
    "name": "Harold's Chicken and Ice Bar",
-   "precision": 0,
+   "precision": 1,
    "street": "349 EDGEWOOD AVE",
    "zip": "30331"
   },
@@ -105787,10 +105787,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754306,
+   "lon": -84.376105,
    "name": "CRU Edgewood",
-   "precision": 0,
+   "precision": 1,
    "street": "367 EDGEWOOD AVE",
    "zip": "30312"
   },
@@ -107603,10 +107603,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754425,
+   "lon": -84.378155,
    "name": "Palm Beach Atlanta",
-   "precision": 0,
+   "precision": 1,
    "street": "330 EDGEWOOD AVE",
    "zip": "30303"
   },
@@ -112045,10 +112045,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Curly's Fried Chicken",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD STE 125",
    "zip": "30303"
   },
@@ -113004,10 +113004,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.939487,
-   "lon": -84.607831,
+   "lat": 33.923992,
+   "lon": -84.575049,
    "name": "WING MAN, THE",
-   "precision": 0,
+   "precision": 1,
    "street": "803 POWDER SPRINGS ST SW STE 1",
    "zip": "30064"
   },
@@ -113909,10 +113909,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 34.022039,
-   "lon": -84.511866,
+   "lat": 33.996122,
+   "lon": -84.547933,
    "name": "MR. WOK",
-   "precision": 0,
+   "precision": 1,
    "street": "1750 BELLS FERRY RD STE B",
    "zip": "30066"
   },
@@ -114407,10 +114407,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754481,
+   "lon": -84.380941,
    "name": "Shah's Halal Food",
-   "precision": 0,
+   "precision": 1,
    "street": "200 EDGEWOOD AVE",
    "zip": "30303"
   },
@@ -115143,10 +115143,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.754977,
-   "lon": -84.418893,
+   "lat": 33.754661,
+   "lon": -84.417417,
    "name": "CATCH IN THE CITY LLC",
-   "precision": 0,
+   "precision": 1,
    "street": "912 MARTIN LUTHER KING JR DR",
    "zip": "30314"
   },
@@ -115596,10 +115596,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.562891,
-   "lon": -84.593422,
+   "lat": 33.56963,
+   "lon": -84.575282,
    "name": "That Burger Spot",
-   "precision": 0,
+   "precision": 1,
    "street": "216 W BROAD ST UNIT B",
    "zip": "30213"
   },
@@ -118244,10 +118244,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.781456,
+   "lon": -84.389654,
    "name": "Afro District",
-   "precision": 0,
+   "precision": 1,
    "street": "132 10TH ST",
    "zip": "30309"
   },
@@ -119438,10 +119438,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.756,
+   "lon": -84.390143,
    "name": "The Vick at Healey",
-   "precision": 0,
+   "precision": 1,
    "street": "57 FORSYTH ST STE 49",
    "zip": "30303"
   },
@@ -119972,10 +119972,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754304,
+   "lon": -84.37589,
    "name": "Goodr Community Market DBA Little Loaf",
-   "precision": 0,
+   "precision": 1,
    "street": "381 EDGEWOOD",
    "zip": "30312"
   },
@@ -123313,10 +123313,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.926513,
-   "lon": -84.35454,
+   "lat": 33.933767,
+   "lon": -84.3509,
    "name": "HEAL Juice Joint & Cafe",
-   "precision": 0,
+   "precision": 1,
    "street": "1155 MT. VERNON STE 600",
    "zip": "30338"
   },
@@ -126633,10 +126633,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.939487,
-   "lon": -84.607831,
+   "lat": 33.916087,
+   "lon": -84.587226,
    "name": "BAYOU BITES",
-   "precision": 0,
+   "precision": 1,
    "street": "1161 POWDER SPRINGS ST SW",
    "zip": "30064"
   },
@@ -127200,10 +127200,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.755783,
+   "lon": -84.3892,
    "name": "South Downtown Brewhouse Cafe",
-   "precision": 0,
+   "precision": 1,
    "street": "97 BROAD ST STE 91",
    "zip": "30303"
   },
@@ -127824,10 +127824,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "K-Cafe the Spot",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE UNIT 131",
    "zip": "30303"
   },
@@ -129258,10 +129258,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Mattchews 2.0",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE",
    "zip": "30303"
   },
@@ -129277,10 +129277,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Mattchews 2.0",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE",
    "zip": "30303"
   },
@@ -129320,10 +129320,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.755783,
+   "lon": -84.3892,
    "name": "Mule Train",
-   "precision": 0,
+   "precision": 1,
    "street": "97 BROAD ST STE 87",
    "zip": "30303"
   },
@@ -136770,10 +136770,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754228,
+   "lon": -84.370429,
    "name": "Staplehouse",
-   "precision": 0,
+   "precision": 1,
    "street": "541 EDGEWOOD AVE",
    "zip": "30312"
   },
@@ -137272,10 +137272,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754361,
+   "lon": -84.372082,
    "name": "Slutty Vegan",
-   "precision": 0,
+   "precision": 1,
    "street": "476 EDGEWOOD AVE BLDG 2&3",
    "zip": "30312"
   },
@@ -139112,6 +139112,44 @@
    "precision": 2,
    "street": "532 8TH ST NW",
    "zip": "30318"
+  },
+  "13016093": {
+   "city": "ATLANTA",
+   "county": "Fulton",
+   "id": 13016093,
+   "inspections": [
+    {
+     "date": "2026-08-27",
+     "insp_id": 57549103,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "lat": 33.699082,
+   "lon": -84.417187,
+   "name": "CHARLOTTE'S CONCH FRITTERS",
+   "precision": 2,
+   "street": "1990 PERKERSON RD 6",
+   "zip": "30310"
+  },
+  "13016094": {
+   "city": "ATLANTA",
+   "county": "Fulton",
+   "id": 13016094,
+   "inspections": [
+    {
+     "date": "2026-08-27",
+     "insp_id": 57549105,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "lat": 33.699082,
+   "lon": -84.417187,
+   "name": "CHARLOTTE'S CONCH FRITTERS",
+   "precision": 2,
+   "street": "1990 PERKERSON RD SW 6",
+   "zip": "30310"
   },
   "13016111": {
    "city": "ATLANTA",
@@ -141688,10 +141726,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.562891,
-   "lon": -84.593422,
+   "lat": 33.566884,
+   "lon": -84.58174,
    "name": "Oz Pizza",
-   "precision": 0,
+   "precision": 1,
    "street": "5 WEST BROAD ST",
    "zip": "30213"
   },
@@ -142546,10 +142584,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.780526,
+   "lon": -84.388838,
    "name": "Cafe Agora Midtown",
-   "precision": 0,
+   "precision": 1,
    "street": "92 PEACHTREE PL",
    "zip": "30309"
   },
@@ -142702,10 +142740,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.772861,
-   "lon": -84.378692,
+   "lat": 33.776104,
+   "lon": -84.384606,
    "name": "Gyro Bros.",
-   "precision": 0,
+   "precision": 1,
    "street": "85 5TH ST",
    "zip": "30308"
   },
@@ -143087,10 +143125,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754264,
+   "lon": -84.373291,
    "name": "Joystick Gamebar",
-   "precision": 0,
+   "precision": 1,
    "street": "427 EDGEWOOD AVE",
    "zip": "30312"
   },
@@ -143259,10 +143297,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.772861,
-   "lon": -84.378692,
+   "lat": 33.776104,
+   "lon": -84.384606,
    "name": "Subway # 50625",
-   "precision": 0,
+   "precision": 1,
    "street": "85 5TH ST STE D-2",
    "zip": "30308"
   },
@@ -145799,10 +145837,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754445,
+   "lon": -84.388458,
    "name": "Mr. Hibachi",
-   "precision": 0,
+   "precision": 1,
    "street": "31 EDGEWOOD AVE",
    "zip": "30303"
   },
@@ -150679,10 +150717,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.784504,
+   "lon": -84.389941,
    "name": "Tabla",
-   "precision": 0,
+   "precision": 1,
    "street": "77 12TH ST STE RT-2",
    "zip": "30309"
   },
@@ -151654,10 +151692,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.83918,
-   "lon": -84.37781,
+   "lat": 33.843466,
+   "lon": -84.372003,
    "name": "Industry Tavern",
-   "precision": 0,
+   "precision": 1,
    "street": "3280 PEACHTREE RD STE 185&187",
    "zip": "30305"
   },
@@ -152439,10 +152477,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.524876,
-   "lon": -84.696783,
+   "lat": 33.509962,
+   "lon": -84.670912,
    "name": "Lucy Mexican Restaurant",
-   "precision": 0,
+   "precision": 1,
    "street": "575 MAIN ST",
    "zip": "30268"
   },
@@ -153609,10 +153647,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.764113,
+   "lon": -84.371887,
    "name": "Mix'd Up Burger Truck",
-   "precision": 0,
+   "precision": 1,
    "street": "313 BOULEVARD",
    "zip": "30312"
   },
@@ -156066,10 +156104,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.83918,
-   "lon": -84.37781,
+   "lat": 33.817908,
+   "lon": -84.375478,
    "name": "KR Steakbar",
-   "precision": 0,
+   "precision": 1,
    "street": "349 PEACHTREE HLS",
    "zip": "30305"
   },
@@ -158250,10 +158288,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.724924,
-   "lon": -84.51488,
+   "lat": 33.724746,
+   "lon": -84.510886,
    "name": "China Express Cascade Inc.",
-   "precision": 0,
+   "precision": 1,
    "street": "1075 FAIRBURN RD STE 105",
    "zip": "30331"
   },
@@ -161721,10 +161759,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.754237,
+   "lon": -84.37122,
    "name": "Chrome Yellow Trading Company",
-   "precision": 0,
+   "precision": 1,
    "street": "501 EDGEWOOD AVE",
    "zip": "30312"
   },
@@ -161760,10 +161798,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.752118,
+   "lon": -84.386646,
    "name": "Subway #63473",
-   "precision": 0,
+   "precision": 1,
    "street": "112 COURTLAND ST STE B",
    "zip": "30303"
   },
@@ -161838,10 +161876,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.562891,
-   "lon": -84.593422,
+   "lat": 33.56963,
+   "lon": -84.575282,
    "name": "La Costa Tacos Y Mariscos",
-   "precision": 0,
+   "precision": 1,
    "street": "216 WEST BROAD ST STE J",
    "zip": "30213"
   },
@@ -162189,10 +162227,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.756,
+   "lon": -84.390143,
    "name": "Taqueria On Broad",
-   "precision": 0,
+   "precision": 1,
    "street": "57 FORSYTH ST STE 543030",
    "zip": "30303"
   },
@@ -163122,10 +163160,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.83918,
-   "lon": -84.37781,
+   "lat": 33.83866,
+   "lon": -84.380688,
    "name": "Himitsu Lounge",
-   "precision": 0,
+   "precision": 1,
    "street": "3050 PEACHTREE RD STE 7",
    "zip": "30305"
   },
@@ -165662,10 +165700,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.724924,
-   "lon": -84.51488,
+   "lat": 33.721889,
+   "lon": -84.509096,
    "name": "Mulan Cascade",
-   "precision": 0,
+   "precision": 1,
    "street": "1195 FAIRBURN RD UNIT 100",
    "zip": "30331"
   },
@@ -165779,10 +165817,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.791302,
-   "lon": -84.386102,
+   "lat": 33.781445,
+   "lon": -84.387974,
    "name": "The Consulate",
-   "precision": 0,
+   "precision": 1,
    "street": "10 10TH ST",
    "zip": "30309"
   },
@@ -167846,10 +167884,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.75389,
+   "lon": -84.382728,
    "name": "Piedmont Central Dining Hall",
-   "precision": 0,
+   "precision": 1,
    "street": "92 PIEDMONT AVE",
    "zip": "30303"
   },
@@ -168080,10 +168118,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.749072,
-   "lon": -84.373837,
+   "lat": 33.75441,
+   "lon": -84.375155,
    "name": "Foxx Original Jamaican Restaurant",
-   "precision": 0,
+   "precision": 1,
    "street": "378 EDGEWOOD AVE",
    "zip": "30312"
   },
@@ -168275,10 +168313,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.772861,
-   "lon": -84.378692,
+   "lat": 33.750178,
+   "lon": -84.386581,
    "name": "Cristo Rey Atlanta Jesuit High School",
-   "precision": 0,
+   "precision": 1,
    "street": "222 PIEDMONT AVE",
    "zip": "30308"
   },
@@ -169367,10 +169405,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.75389,
+   "lon": -84.382728,
    "name": "Piedmont Central Dining Hall (Dessert Area)",
-   "precision": 0,
+   "precision": 1,
    "street": "92 PIEDMONT AVE",
    "zip": "30303"
   },
@@ -170298,10 +170336,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.706468,
-   "lon": -84.38819,
+   "lat": 33.756,
+   "lon": -84.390143,
    "name": "Cafe Lucia",
-   "precision": 0,
+   "precision": 1,
    "street": "57 FORSYTH ST STE R8",
    "zip": "30315"
   },
@@ -225029,10 +225067,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.939487,
-   "lon": -84.607831,
+   "lat": 33.91625,
+   "lon": -84.586775,
    "name": "LOLITA'S C'EST TOUT BON 2 EAT - MOBILE",
-   "precision": 0,
+   "precision": 1,
    "street": "1147 POWDER SPRINGS ST STE 2B",
    "zip": "30064"
   },
@@ -225068,10 +225106,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.939487,
-   "lon": -84.607831,
+   "lat": 33.91625,
+   "lon": -84.586775,
    "name": "LOLITA'S PARLOUR",
-   "precision": 0,
+   "precision": 1,
    "street": "1147 POWDER SPRINGS ST STE 2B",
    "zip": "30064"
   },
@@ -245971,6 +246009,11 @@
     {
      "date": "2026-03-05",
      "insp_id": 57517012,
+     "score": 100
+    },
+    {
+     "date": "2026-08-27",
+     "insp_id": 57549110,
      "score": 100
     }
    ],
@@ -277446,10 +277489,10 @@
     }
    ],
    "kind": "Food Service Inspections",
-   "lat": 33.758486,
-   "lon": -84.38758,
+   "lat": 33.754367,
+   "lon": -84.381014,
    "name": "Metro Deli",
-   "precision": 0,
+   "precision": 1,
    "street": "209 EDGEWOOD AVE",
    "zip": "30303"
   },

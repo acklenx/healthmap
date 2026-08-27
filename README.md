@@ -56,13 +56,42 @@ nothing at all if it was checked recently.
 ### Locating things
 
 The inspection source publishes addresses but no coordinates. The crawler
-geocodes them through the US Census batch geocoder (free, no key) and caches the
+geocodes them through the US Census geocoder (free, no key) and caches the
 results in `data/geocache.json`, so each address is only ever looked up once.
 
-About 10% of addresses don't match a street range — mall food courts, new
-construction, suite-only addresses. Those fall back to a centroid computed from
-the addresses that *did* match in the same ZIP, and the app marks their distance
-approximate with a `~`. Nothing is ever dropped from the list.
+Three passes, cheapest first. The batch endpoint takes thousands of addresses in
+one request but matches on parsed fields, so it rejects a row outright when the
+locality disagrees with its street file — DPH writes `SANDY SPRINGS` where the
+Census range is recorded against Atlanta, and the whole address is thrown out.
+Pass two retries the misses without suite and unit designators. Pass three sends
+what is left to the one-line endpoint, one request each, which parses the
+address as a whole and is far more forgiving; it recovers about a fifth of them.
+Sending city and ZIP even there matters — it is what confirms a match is the
+right street rather than a same-named one elsewhere in Georgia.
+
+**Misses are cached too.** Roughly 5% of addresses will never match: airport
+concourses, food courts inside malls, suite-only addresses in buildings the
+street file doesn't carry. Recording only successes meant re-asking about every
+one of them on every crawl, forever, and the set could only grow. They are
+stored with a miss count and an escalating retry delay — 90 days, then 180, then
+a year — because the answer *can* change when the reference data gains new
+construction, just not monthly. The delay is spread by a hash of the address so
+a night's worth of misses doesn't all come due on the same night a quarter
+later. A failed *request* is never recorded as a miss; an outage would otherwise
+silence thousands of addresses for months.
+
+About 11% of addresses still end up without a street-range match. Those fall
+back to a centroid computed from the addresses that *did* match in the same ZIP,
+and the app marks their distance approximate with a `~`. Nothing is ever dropped
+from the list.
+
+`scripts/check_geocoder.py` guards all of this. `verify_data.py` can only see
+the *aggregate* share of placed addresses, which the cache dominates — the
+geocoder could return nothing for a month and every check would still pass while
+new establishments quietly went unplaced. So the canary asks five ordinary metro
+addresses with known answers, and the refresh workflow goes red if most of them
+fail. It runs last, after the deploy: a sick geocoder is worth shouting about,
+but it is not a reason to withhold good inspection scores.
 
 ### The map
 
