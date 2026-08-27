@@ -326,6 +326,10 @@ def build_shards(places):
             "c": county,
             "s": slug(county),
             "n": len(rows),
+            # Inspections and ZIPs are here so the coverage page can report on a
+            # county without downloading it. They cost a few bytes each.
+            "i": sum(r["hn"] for r in rows),
+            "z": len({r["z"] for r in rows}),
             "y": round(sum(lats) / len(lats), 5),
             "x": round(sum(lons) / len(lons), 5),
             "b": [round(min(lats), 5), round(min(lons), 5),
@@ -420,7 +424,12 @@ def main():
     save_json(
         os.path.join(WEB_PUBLIC, "counties.json"),
         {"v": PAYLOAD_VERSION, "generated": generated,
-         "places": len(places), "counties": manifest},
+         "places": len(places),
+         "inspections": sum(p["hn"] for p in places),
+         # Every county in the state, so the coverage page can show what is
+         # missing as well as what is here.
+         "all_counties": len(GEORGIA),
+         "counties": manifest},
         compact=True,
     )
     write_shards(os.path.join(WEB_PUBLIC, "places"),

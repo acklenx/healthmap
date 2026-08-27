@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Score">
-<link rel="manifest" href="/manifest.webmanifest?cache-id=52228691">
+<link rel="manifest" href="/manifest.webmanifest?cache-id=19f6b0b0">
 <link rel="icon" href="/icons/icon.svg?cache-id=2290448a" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/icon-192.png?cache-id=2290448a">
-<link rel="stylesheet" href="/styles.css?cache-id=52228691">
+<link rel="stylesheet" href="/styles.css?cache-id=19f6b0b0">
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
 </head>
 <body>
@@ -218,6 +218,35 @@
   </section>
 </div>
 
+<!-- Coverage and crawl status. -->
+<div id="statussheet" class="sheet" hidden>
+  <div class="sheet-scrim" data-close></div>
+  <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="status-title">
+    <div class="sheet-grab" data-close></div>
+    <div class="sheet-head">
+      <div>
+        <h2 id="status-title">Coverage &amp; crawl</h2>
+        <p id="status-sub" class="sheet-sub"></p>
+      </div>
+      <button id="status-close" class="icon-btn" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="status-body">
+      <div id="status-stats" class="stat-grid"></div>
+      <div id="status-progress"></div>
+      <h3 class="sec-title">Where the data comes from</h3>
+      <div id="status-map" class="cover-map"><span id="status-map-canvas" class="cover-map-canvas" aria-hidden="true"></span></div>
+      <p class="sheet-hint">Each box is a county that has been crawled, sized by its
+        own extent and shaded by how many places are in it.</p>
+      <h3 class="sec-title">Latest crawls</h3>
+      <div id="status-runs" aria-live="polite"></div>
+      <h3 class="sec-title">By county</h3>
+      <div class="table-wrap"><table class="area-table" id="status-counties"></table></div>
+    </div>
+  </section>
+</div>
+
 <!-- Scores in this area. -->
 <div id="statssheet" class="sheet" hidden>
   <div class="sheet-scrim" data-close></div>
@@ -254,6 +283,14 @@
           <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
         </svg>
         <span><b>Scores in this area</b><small>Averages, spread, and how ZIPs compare</small></span>
+        <svg class="menu-go" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg>
+      </button>
+
+      <button id="menu-status" class="menu-row" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 3.6 20.4 8v8L12 20.4 3.6 16V8Z"/><path d="M12 12v8.4M12 12 3.6 8M12 12l8.4-4"/>
+        </svg>
+        <span><b>Coverage &amp; crawl</b><small id="menu-status-sub">Which counties are in, and how the last crawl went</small></span>
         <svg class="menu-go" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg>
       </button>
 
@@ -362,6 +399,6 @@
   </section>
 </div>
 
-<script src="/app.js?cache-id=52228691" type="module"></script>
+<script src="/app.js?cache-id=19f6b0b0" type="module"></script>
 </body>
 </html>

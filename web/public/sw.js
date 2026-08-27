@@ -19,7 +19,7 @@
  * few bytes, and caching it would defeat the entire scheme.
  */
 
-const SHELL_VERSION = "52228691";
+const SHELL_VERSION = "19f6b0b0";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const HISTORY = "history-v1";
@@ -32,12 +32,12 @@ const TILE_LIMIT = 900;      // roughly a couple of towns' worth, at a few kB ea
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?cache-id=52228691",
-  "/app.js?cache-id=52228691",
+  "/styles.css?cache-id=19f6b0b0",
+  "/app.js?cache-id=19f6b0b0",
   // Loaded on demand when something is shared, precached for the same reason
   // Leaflet is: the moment you want it is not a good moment to need the network.
-  "/qr.js?cache-id=52228691",
-  "/manifest.webmanifest?cache-id=52228691",
+  "/qr.js?cache-id=19f6b0b0",
+  "/manifest.webmanifest?cache-id=19f6b0b0",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least
   // likely to have signal to spare.

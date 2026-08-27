@@ -459,6 +459,44 @@ main { padding: 0 14px; }
 }
 .share-actions { display: flex; gap: 8px; margin-top: 12px; }
 
+/* ---- coverage and crawl status ----------------------------------------- */
+
+.cover-map { position: relative; height: 240px; border: 1px solid var(--border);
+             border-radius: 12px; overflow: hidden; background: var(--wash); }
+.cover-map-canvas { position: absolute; inset: 0; display: block; }
+.cover-box { stroke: var(--accent); fill: var(--accent); }
+
+/* Coverage as a bar, because "3 of 159" and "6% of the state" are different
+   facts and the second is the one that is hard to picture. */
+.cover-bar { margin: 4px 0 0; }
+.cover-track { display: block; height: 10px; border-radius: 999px; background: var(--wash); overflow: hidden; }
+.cover-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); min-width: 3px;
+              transition: width .4s ease; }
+@media (prefers-reduced-motion: reduce) { .cover-fill { transition: none; } }
+.cover-note { margin: 6px 0 0; color: var(--ink-muted); font-size: 12.5px; }
+
+.run { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0;
+       border-bottom: 1px solid var(--border); }
+.run:last-child { border-bottom: 0; }
+.run-dot { flex: 0 0 auto; width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: var(--ink-muted); }
+.run-dot[data-s="success"]     { background: var(--grade-a); }
+.run-dot[data-s="failure"]     { background: var(--grade-u); }
+.run-dot[data-s="in_progress"] { background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .run-dot[data-s="in_progress"] { animation: none; } }
+.run-main { flex: 1 1 auto; min-width: 0; }
+.run-title { font-size: 14px; font-weight: 600; }
+.run-meta { margin-top: 1px; color: var(--ink-muted); font-size: 12.5px; }
+.run a { color: var(--accent); }
+
+/* Steps, so a running crawl shows movement rather than a spinner. */
+.steps { margin: 8px 0 0; display: grid; gap: 3px; }
+.step { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink-muted); }
+.step b { flex: 0 0 auto; width: 14px; text-align: center; font-weight: 700; }
+.step[data-s="in_progress"] { color: var(--accent); font-weight: 600; }
+.step[data-s="completed"] { color: var(--ink-2); }
+.step[data-s="failure"] { color: var(--grade-u); font-weight: 600; }
+
 /* ---- scores in this area ------------------------------------------------ */
 
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }

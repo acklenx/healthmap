@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "52228691", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "19f6b0b0", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -70,6 +70,9 @@ const el = {
   searchDot: $("#search-dot"),
   moreSheet: $("#moresheet"), moreBtn: $("#more-btn"), moreFresh: $("#more-fresh"),
   statsSheet: $("#statssheet"), statsBody: $("#stats-body"), statsScope: $("#stats-scope"),
+  statusSheet: $("#statussheet"), statusSub: $("#status-sub"), statusStats: $("#status-stats"),
+  statusProgress: $("#status-progress"), statusRuns: $("#status-runs"),
+  statusCounties: $("#status-counties"), statusMapCanvas: $("#status-map-canvas"),
   shareSheet: $("#sharesheet"), shareQr: $("#share-qr"), shareLink: $("#share-link"),
   shareSub: $("#share-sub"), shareCopy: $("#share-copy"), shareCopyLabel: $("#share-copy-label"),
   shareNative: $("#share-native"),
@@ -768,6 +771,186 @@ function applyShareState() {
 
   // Leave the address bar clean; the state is in memory now.
   history.replaceState(null, "", location.pathname);
+}
+
+/* ---- coverage and crawl status ------------------------------------------ */
+
+/* The repository is public, so its Actions API is readable from the browser
+ * with no token and no proxy. That is the whole trick: a crawl running on
+ * GitHub can be watched from the app while it happens, step by step, rather
+ * than only being visible once it has published something.
+ *
+ * Unauthenticated callers get 60 requests an hour per IP, so this polls only
+ * while the sheet is open, backs off hard when nothing is running, and says so
+ * plainly if it runs out rather than sitting on a stale spinner. */
+const RUNS_API = "https://api.github.com/repos/acklenx/healthmap/actions";
+const POLL_ACTIVE = 15000;
+const POLL_IDLE = 300000;
+
+let statusTimer = null;
+let statusMap = null;
+let statusRateLimited = false;
+
+async function gh(path) {
+  const res = await fetch(`${RUNS_API}${path}`, { headers: { Accept: "application/vnd.github+json" } });
+  if (res.status === 403 || res.status === 429) {
+    statusRateLimited = true;
+    throw new Error("rate limited");
+  }
+  if (!res.ok) throw new Error(String(res.status));
+  statusRateLimited = false;
+  return res.json();
+}
+
+function duration(fromIso, toIso) {
+  const ms = (toIso ? new Date(toIso) : new Date()) - new Date(fromIso);
+  if (!Number.isFinite(ms) || ms < 0) return "";
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.round((ms % 60000) / 1000);
+  return mins ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
+function stepsHTML(job) {
+  const steps = (job.steps || []).filter((s) => !/^(Set up job|Complete job|Post )/.test(s.name));
+  if (!steps.length) return "";
+  return `<div class="steps">${steps.map((s) => {
+    const state = s.conclusion === "failure" ? "failure" : s.status;
+    const mark = s.conclusion === "success" ? "✓"
+      : s.conclusion === "failure" ? "✕"
+      : s.status === "in_progress" ? "▸" : "·";
+    const took = s.started_at ? duration(s.started_at, s.completed_at) : "";
+    return `<div class="step" data-s="${state}"><b>${mark}</b>
+      <span>${escapeHTML(s.name)}</span>
+      <span style="margin-left:auto">${took}</span></div>`;
+  }).join("")}</div>`;
+}
+
+function runHTML(run, jobs) {
+  const state = run.status === "completed" ? (run.conclusion || "completed") : run.status;
+  const when = relativeTime(run.run_started_at || run.created_at);
+  const took = duration(run.run_started_at || run.created_at,
+                        run.status === "completed" ? run.updated_at : null);
+  const job = jobs?.jobs?.[0];
+  return `<div class="run">
+    <span class="run-dot" data-s="${state}"></span>
+    <div class="run-main">
+      <div class="run-title">${escapeHTML(run.name)}${
+        run.status !== "completed" ? " — running" : ""}</div>
+      <div class="run-meta">${when} · ${took}${
+        run.status === "completed" ? "" : " so far"} ·
+        <a href="${run.html_url}" target="_blank" rel="noopener">on GitHub ↗</a></div>
+      ${job ? stepsHTML(job) : ""}
+    </div>
+  </div>`;
+}
+
+async function refreshRuns() {
+  try {
+    const data = await gh("/runs?per_page=4");
+    const runs = data.workflow_runs || [];
+    const live = runs.find((r) => r.status !== "completed");
+    // Steps only for the one that is moving; the finished ones are a summary.
+    const jobs = live ? await gh(`/runs/${live.id}/jobs`).catch(() => null) : null;
+
+    el.statusRuns.innerHTML = runs.length
+      ? runs.map((r) => runHTML(r, r.id === live?.id ? jobs : null)).join("")
+      : `<p class="cover-note">No crawls have run yet.</p>`;
+
+    return !!live;
+  } catch {
+    el.statusRuns.innerHTML = statusRateLimited
+      ? `<p class="cover-note">GitHub's API is rate limited for now — it allows
+         60 checks an hour per address, and this page has used them. It will
+         work again within the hour;
+         <a href="https://github.com/acklenx/healthmap/actions" target="_blank" rel="noopener">the runs are on GitHub ↗</a>
+         in the meantime.</p>`
+      : `<p class="cover-note">Couldn't reach GitHub to check on the crawl.
+         <a href="https://github.com/acklenx/healthmap/actions" target="_blank" rel="noopener">Runs are here ↗</a>.</p>`;
+    return false;
+  }
+}
+
+function coverageHTML(m) {
+  const covered = m.counties.length;
+  const pct = (covered / m.all_counties) * 100;
+  const places = m.places.toLocaleString();
+  return {
+    stats: `
+      <div class="stat"><b>${covered}<small style="font-size:15px;font-weight:500;color:var(--ink-muted)"> / ${m.all_counties}</small></b><small>Counties crawled</small></div>
+      <div class="stat"><b>${places}</b><small>Places</small></div>
+      <div class="stat"><b>${m.inspections.toLocaleString()}</b><small>Inspections</small></div>
+      <div class="stat"><b>${relativeTime(m.generated)}</b><small>Last refreshed</small></div>`,
+    progress: `<div class="cover-bar">
+        <span class="cover-track"><span class="cover-fill" style="width:${pct.toFixed(1)}%"></span></span>
+        <p class="cover-note">${pct.toFixed(0)}% of Georgia's counties.
+          ${m.all_counties - covered} to go — a statewide crawl is one
+          <code>--counties all</code> away.</p>
+      </div>`,
+    table: `<thead><tr><th scope="col">County</th><th scope="col">Places</th>
+              <th scope="col">Inspections</th><th scope="col">ZIPs</th></tr></thead>
+            <tbody>${m.counties.slice().sort((a, b) => b.n - a.n).map((c) => `<tr>
+              <th scope="row">${escapeHTML(c.c)}</th>
+              <td><b>${c.n.toLocaleString()}</b></td>
+              <td>${c.i.toLocaleString()}</td>
+              <td>${c.z}</td></tr>`).join("")}</tbody>`,
+  };
+}
+
+/** Boxes on a map of Georgia: what is covered, and how much of it is not. */
+async function drawCoverageMap(m) {
+  let lib;
+  try { lib = await loadLeaflet(); } catch { return; }
+  L = L || lib;
+
+  if (!statusMap) {
+    statusMap = L.map(el.statusMapCanvas, {
+      zoomControl: false, dragging: false, touchZoom: false, scrollWheelZoom: false,
+      doubleClickZoom: false, boxZoom: false, keyboard: false, attributionControl: false,
+    });
+    L.tileLayer(TILES, { maxZoom: 12, crossOrigin: true }).addTo(statusMap);
+  }
+  statusMap.eachLayer((l) => { if (l instanceof L.Rectangle) statusMap.removeLayer(l); });
+
+  const most = Math.max(...m.counties.map((c) => c.n), 1);
+  for (const c of m.counties) {
+    L.rectangle([[c.b[0], c.b[1]], [c.b[2], c.b[3]]], {
+      className: "cover-box",
+      weight: 1.2,
+      fillOpacity: 0.12 + 0.4 * (c.n / most),
+      interactive: false,
+    }).addTo(statusMap);
+  }
+  statusMap.invalidateSize();
+  // Georgia, so the gap between what is covered and what is not is the point.
+  statusMap.fitBounds([[30.3, -85.7], [35.05, -80.8]], { padding: [6, 6] });
+}
+
+async function openStatusSheet() {
+  const m = state.manifest;
+  if (!m) return;
+  const parts = coverageHTML(m);
+  el.statusSub.textContent =
+    `${m.counties.length} of ${m.all_counties} Georgia counties`;
+  el.statusStats.innerHTML = parts.stats;
+  el.statusProgress.innerHTML = parts.progress;
+  el.statusCounties.innerHTML = parts.table;
+  el.statusRuns.innerHTML = `<p class="cover-note">Checking GitHub…</p>`;
+  setSheet(el.statusSheet, true);
+  drawCoverageMap(m);
+  pollRuns();
+}
+
+async function pollRuns() {
+  clearTimeout(statusTimer);
+  if (el.statusSheet.hidden) return;
+  const live = await refreshRuns();
+  if (el.statusSheet.hidden) return;
+  statusTimer = setTimeout(pollRuns, live ? POLL_ACTIVE : POLL_IDLE);
+}
+
+function closeStatusSheet() {
+  clearTimeout(statusTimer);
+  setSheet(el.statusSheet, false);
 }
 
 /* ---- share -------------------------------------------------------------- */
@@ -1958,6 +2141,10 @@ el.moreSheet.addEventListener("click", (e) => {
 $("#menu-loc").addEventListener("click", () => { closeMoreSheet(); openLocationSheet(); });
 $("#menu-stats").addEventListener("click", () => { closeMoreSheet(); openStatsSheet(); });
 $("#menu-share").addEventListener("click", () => { closeMoreSheet(); openShareSheet(); });
+$("#menu-status").addEventListener("click", () => { closeMoreSheet(); openStatusSheet(); });
+el.statusSheet.addEventListener("click", (e) => {
+  if (e.target.closest("[data-close]") || e.target.closest("#status-close")) closeStatusSheet();
+});
 el.shareSheet.addEventListener("click", (e) => {
   if (e.target.closest("[data-close]") || e.target.closest("#share-close")) closeShareSheet();
 });
@@ -2089,6 +2276,7 @@ document.addEventListener("keydown", (e) => {
   closeMoreSheet();
   closeStatsSheet();
   closeShareSheet();
+  closeStatusSheet();
   closeSheet();
 });
 
