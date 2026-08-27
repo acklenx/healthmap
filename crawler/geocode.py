@@ -49,13 +49,19 @@ MISS_BACKOFF_DAYS = (90, 180, 365)
 # cap simply waits for the next run -- it is logged, never dropped silently.
 MAX_ONELINE = 400
 
-# Metro Atlanta. A geocoder should not return anything outside this for an
-# address the crawler collected; if it does, the match is wrong, not precise.
-BBOX_LAT = (33.4, 34.6)
-BBOX_LON = (-85.2, -84.0)
+# Georgia, with a little margin. A geocoder should not return anything outside
+# this for an address a Georgia health department collected; if it does, the
+# match is wrong, not precise -- which is the failure the one-line pass exists
+# to guard against, since it drops the locality to get a hit.
+#
+# This was the metro Atlanta box while only three counties were crawled. That
+# is a fine box right up until the crawl leaves Atlanta, at which point it
+# starts throwing away every correct answer instead of the wrong ones.
+BBOX_LAT = (30.30, 35.05)
+BBOX_LON = (-85.65, -80.75)
 
 
-def in_metro(lat, lon):
+def in_georgia(lat, lon):
     return BBOX_LAT[0] <= lat <= BBOX_LAT[1] and BBOX_LON[0] <= lon <= BBOX_LON[1]
 
 # Suite/unit designators confuse the street-range matcher more often than they
@@ -163,8 +169,8 @@ def _oneline(street, city, zipcode, log=print):
         return None
     coords = matches[0]["coordinates"]
     lat, lon = round(coords["y"], 6), round(coords["x"], 6)
-    if not in_metro(lat, lon):
-        # A street of the same name in another part of the state.
+    if not in_georgia(lat, lon):
+        # A street of the same name in another state entirely.
         return None
     return lat, lon
 

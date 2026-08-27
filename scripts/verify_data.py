@@ -107,9 +107,10 @@ def main():
     if pct < 70:
         failures.append("only %.1f%% geocoded precisely" % pct)
 
-    # Coordinates must actually be in metro Atlanta.
+    # Coordinates must actually be in Georgia. This was the metro Atlanta box,
+    # which is correct until the crawl leaves Atlanta and then fails every run.
     strays = [p for p in places
-              if not (33.4 <= p["y"] <= 34.6 and -85.2 <= p["x"] <= -84.0)]
+              if not (30.30 <= p["y"] <= 35.05 and -85.65 <= p["x"] <= -80.75)]
     if strays:
         failures.append("%d places outside the expected bounding box (e.g. %s)"
                         % (len(strays), strays[0]["n"]))
