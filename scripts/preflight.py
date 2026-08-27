@@ -43,6 +43,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--counties", default=",".join(crawl.COUNTIES))
     ap.add_argument("--chunk", default="")
+    ap.add_argument("--offline", action="store_true",
+                    help="skip the network checks. For CI, where the point is "
+                         "to guard the assumptions in the repository rather "
+                         "than the weather outside it.")
     args = ap.parse_args()
 
     failures = []
@@ -81,7 +85,7 @@ def main():
         failures.append("no geography for: %s" % ", ".join(missing_geo[:6]))
 
     # The source, on a county this run actually intends to crawl.
-    probe = counties[0] if counties else None
+    probe = None if args.offline else (counties[0] if counties else None)
     if probe:
         try:
             from datetime import date, timedelta
@@ -95,6 +99,15 @@ def main():
             failures.append("could not reach the source for %s: %s" % (probe, exc))
 
     # The geocoder, before thousands of new addresses depend on it.
+    if args.offline:
+        if failures:
+            print("\nPREFLIGHT FAILED:")
+            for f in failures:
+                print("  - %s" % f)
+            return 1
+        print("\nOffline preflight passed.")
+        return 0
+
     rows = [(str(i), st, city, "GA", z)
             for i, (st, city, z) in enumerate(__import__("check_geocoder").CONTROLS)]
     found = source and geocode._post_batch(rows)

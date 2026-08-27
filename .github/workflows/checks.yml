@@ -27,6 +27,14 @@ jobs:
       - name: Cache stamps are current
         run: python3 scripts/stamp_assets.py --check
 
+      # The incident this exists for: a crawl ran 27 minutes and would have
+      # been discarded by a coordinate check that still described only metro
+      # Atlanta. Nothing catches that at review time, and it costs an hour to
+      # find at run time -- so it is asserted here instead, against every
+      # county in the state, offline, on every push.
+      - name: Every Georgia county fits the coordinate bounds
+        run: python3 scripts/preflight.py --counties all --offline
+
       - name: JavaScript parses
         run: |
           for f in web/public/app.js web/public/sw.js web/public/qr.js; do
