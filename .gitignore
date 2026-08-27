@@ -6,3 +6,8 @@ node_modules/
 
 # Claude Code session logs and hooks (local tooling, not part of the app)
 .claude/
+
+# Local secrets -- never commit
+.env
+.env.*
+!.env.example
