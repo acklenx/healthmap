@@ -102,10 +102,35 @@ jobs:
                   web/public/places/ web/public/history/
           if git diff --staged --quiet; then
             echo "No changes to commit."
-          else
-            git commit -m "data: refresh $(date -u +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git commit -m "data: refresh $(date -u +%Y-%m-%d)"
+
+          # Rebase and retry rather than throwing the crawl away.
+          #
+          # A statewide crawl runs for an hour or more, and any push to main in
+          # that window makes this checkout stale. The push then fails, the job
+          # goes red, and everything it fetched is discarded -- which is what
+          # happened the first time a full crawl overlapped a code change.
+          #
+          # This only ever writes generated data, and people only write source,
+          # so a rebase is expected to apply cleanly. If it does not, fail
+          # loudly: a conflict here means something is writing data by hand,
+          # and quietly forcing over it would be the wrong answer.
+          for attempt in 1 2 3; do
+            if git push; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push rejected; rebasing onto origin/main and retrying."
+            git pull --rebase origin main || {
+              echo "Rebase failed -- data was changed outside this job."
+              exit 1
+            }
+            sleep 5
+          done
+          echo "Could not push after 3 attempts."
+          exit 1
 
       # No deploy step. Cloudflare is watching this repository and the push
       # above has already started the build. Adding `wrangler pages deploy`
