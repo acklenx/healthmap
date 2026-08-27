@@ -29,6 +29,18 @@ on:
         description: "Run a full crawl instead of an incremental one"
         type: boolean
         default: false
+      counties:
+        description: "Counties to crawl: names, or 'all' for Georgia"
+        type: string
+        default: ""
+      chunk:
+        description: "Crawl the Nth of M slices, e.g. 2/4. Splits a statewide run."
+        type: string
+        default: ""
+      delay:
+        description: "Minimum seconds between requests (default 0.5)"
+        type: string
+        default: ""
 
 concurrency:
   group: refresh
@@ -61,7 +73,20 @@ jobs:
           fi
 
       - name: Crawl
-        run: python3 crawler/crawl.py ${{ steps.mode.outputs.args }} --workers 3
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+          DELAY: ${{ github.event.inputs.delay }}
+        run: |
+          # if-blocks rather than `[ -n "$X" ] && ...`: this step runs under
+          # `bash -e`, where an and-list whose test fails makes the whole
+          # statement non-zero and kills the job. An empty input is normal.
+          set -- ${{ steps.mode.outputs.args }} --workers 3
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
+          echo "crawl.py $*"
+          python3 crawler/crawl.py "$@"
 
       # A scrape fails quietly: upstream markup changes and the payload comes
       # back empty while everything still "succeeds". Fail the run instead of

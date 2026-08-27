@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "85251db0", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "385682c1", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -279,9 +279,17 @@ async function loadGeneration(stamp) {
 
   // Await only the first. The nearest twenty places are almost certainly in
   // the county you are standing in, so the list is right as soon as it lands.
-  await addCounty(order[0], stamp);
+  //
+  // Failing is not fatal: one unreachable shard used to throw out of here and
+  // leave the app with an empty list and no way back. Render regardless, and
+  // hand the whole order to loadNearby so the one that failed gets another go.
+  try {
+    await addCounty(order[0], stamp);
+  } catch {
+    /* fall through — loadNearby retries it below */
+  }
   render();
-  loadNearby(order.slice(1), stamp);
+  loadNearby(order, stamp);
 }
 
 /** Pull the rest outwards, re-rendering as each arrives. */
@@ -1270,7 +1278,8 @@ function render({ recompute = true } = {}) {
     el.status.textContent =
       "Set your location to sort by what's closest — or enter a ZIP code.";
   }
-  syncPins();      // the map draws whatever the list just decided to show
+  syncPaneLayout();  // a wide screen may only now have something to map
+  syncPins();        // the map draws whatever the list just decided to show
 }
 
 /* ------------------------------------------------------------------ map --- */
@@ -1294,6 +1303,7 @@ let gpsMarker = null;
 let mapReady = false;
 const pins = new Map();          // place id -> the marker currently drawn for it
 const clusters = new Map();      // grid cell key -> the cluster marker for it
+const ghosts = new Map();        // county slug -> its not-loaded-yet marker
 
 function loadLeaflet() {
   if (window.L) return Promise.resolve(window.L);
@@ -1505,7 +1515,56 @@ function syncPins() {
     clusters.delete(key);
   }
 
+  syncGhosts(b);
   setMapNote(inFrame, shown, saved.length);
+}
+
+/* Counties that exist but are not loaded yet.
+ *
+ * Zoomed out, the map would otherwise be blank over most of the state with no
+ * indication whether that means "no restaurants" or "not fetched". A hollow
+ * marker at the county's centroid, carrying the count the manifest already
+ * knows, says which -- and it fills in as a real cluster the moment that
+ * county lands, so a crawl spreading outwards is something you can watch
+ * happen rather than infer.
+ */
+function syncGhosts(bounds) {
+  const wanted = new Map();
+  for (const county of unloadedCounties()) {
+    if (bounds.contains([county.y, county.x])) wanted.set(county.s, county);
+  }
+
+  for (const [slug, county] of wanted) {
+    const existing = ghosts.get(slug);
+    if (existing && existing._n === county.n) continue;
+    if (existing) pinLayer.removeLayer(existing);
+    const marker = L.marker([county.y, county.x], {
+      icon: L.divIcon({
+        className: "pin-wrap",
+        html: `<span class="pin-ghost"><b>${county.n.toLocaleString()}</b>` +
+              `<small>${escapeHTML(county.c)}</small></span>`,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+      }),
+      title: `${county.c} County — ${county.n.toLocaleString()} places, not loaded yet. Tap to load.`,
+      keyboard: false,
+    });
+    marker._n = county.n;
+    marker.on("click", async () => {
+      try {
+        await addCounty(county, state.generated);
+        render();
+      } catch { /* the ghost stays; tapping again retries */ }
+    });
+    marker.addTo(pinLayer);
+    ghosts.set(slug, marker);
+  }
+
+  for (const [slug, marker] of ghosts) {
+    if (wanted.has(slug)) continue;
+    pinLayer.removeLayer(marker);
+    ghosts.delete(slug);
+  }
 }
 
 function setMapNote(inFrame, drawn, saved = 0) {
@@ -1682,6 +1741,12 @@ function setPane(pane) {
   if (pane === "map") ensureMap();
 }
 
+/* Build the map once there is something to put on it.
+ *
+ * Called from render() as well as at boot, because at boot there may be
+ * nothing yet: the first county's shard can fail, or simply be slow, and this
+ * used to run exactly once against an empty list and never try again. A wide
+ * screen would then sit there with no map at all and no way to ask for one. */
 function syncPaneLayout() {
   if (wideEnough.matches && state.places.length) ensureMap();
 }

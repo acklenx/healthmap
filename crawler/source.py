@@ -15,6 +15,7 @@ five inspections occupies five of the twenty slots on a page.
 import gzip
 import html
 import re
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -24,6 +25,30 @@ from datetime import date, datetime
 BASE = "https://ga.healthinspections.us/georgia/"
 UA = "restaurant-scores/1.0 (personal health-score lookup)"
 PAGE_SIZE = 20
+
+# Minimum gap between requests, across every worker.
+#
+# This is somebody's health department, not a CDN, and a statewide crawl is
+# ~13,000 page fetches in a sitting. The workers stay for parallelism on the
+# parsing side, but the network side is deliberately serialised to roughly two
+# requests a second -- slower than any one person browsing the site, and a
+# rounding error against its real traffic. set_delay() raises it further.
+_MIN_INTERVAL = 0.5
+_last_request = [0.0]
+_throttle = threading.Lock()
+
+
+def set_delay(seconds):
+    global _MIN_INTERVAL
+    _MIN_INTERVAL = max(0.0, float(seconds))
+
+
+def _wait_turn():
+    with _throttle:
+        gap = _MIN_INTERVAL - (time.monotonic() - _last_request[0])
+        if gap > 0:
+            time.sleep(gap)
+        _last_request[0] = time.monotonic()
 
 # Georgia maps scores to letter grades by fixed cutoffs (DPH Chapter 511-6-1).
 GRADE_CUTOFFS = ((90, "A"), (80, "B"), (70, "C"))
@@ -44,6 +69,7 @@ def fetch(url, retries=4, timeout=45):
     """GET with exponential backoff. Returns decoded HTML."""
     last = None
     for attempt in range(retries):
+        _wait_turn()
         req = urllib.request.Request(
             url, headers={"User-Agent": UA, "Accept-Encoding": "gzip", "Accept": "text/html"}
         )

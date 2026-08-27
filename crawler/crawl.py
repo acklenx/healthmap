@@ -371,6 +371,14 @@ def main():
     ap.add_argument("--counties", default=",".join(COUNTIES),
                     help="comma-separated county names, or 'all' for Georgia")
     ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--delay", type=float, default=0.5,
+                    help="minimum seconds between requests, across all workers")
+    ap.add_argument("--chunk", default="",
+                    help="crawl the Nth of M slices of the county list, e.g. 2/4. "
+                         "Because the store is rebuilt from what was published, "
+                         "a slice merges into the existing data rather than "
+                         "replacing it -- so a statewide crawl can be split "
+                         "across several runs without losing anything.")
     ap.add_argument("--limit-pages", type=int, default=0, help="debug: stop early")
     ap.add_argument("--skip-geocode", action="store_true")
     ap.add_argument("--rebuild", action="store_true",
@@ -382,9 +390,25 @@ def main():
     unknown = [c for c in counties if c not in GEORGIA]
     if unknown:
         sys.exit("unknown counties: %s" % ", ".join(unknown))
+
+    if args.chunk:
+        try:
+            index, parts = (int(x) for x in args.chunk.split("/", 1))
+        except ValueError:
+            sys.exit("--chunk wants N/M, e.g. 2/4")
+        if not 1 <= index <= parts:
+            sys.exit("--chunk %s is out of range" % args.chunk)
+        size = math.ceil(len(counties) / parts)
+        counties = counties[(index - 1) * size: index * size]
+        log("Chunk %d of %d: %d counties" % (index, parts, len(counties)))
+
+    source.set_delay(args.delay)
     until = date.today() + timedelta(days=1)
     since = date(2010, 1, 1) if args.full else until - timedelta(days=args.since_days)
-    log("Crawling %s from %s to %s" % (", ".join(counties), since, until))
+    log("Crawling %s from %s to %s"
+        % (", ".join(counties) if len(counties) <= 6
+           else "%d counties" % len(counties), since, until))
+    log("  politeness: %d workers, >=%.2fs between requests" % (args.workers, args.delay))
 
     started = time.time()
     store = load_store()

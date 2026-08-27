@@ -19,7 +19,12 @@ MANIFEST = os.path.join(ROOT, "web", "public", "counties.json")
 
 # Chains large enough that their absence means the crawl broke, not that they closed.
 CANARIES = ["WAFFLE HOUSE", "CHICK-FIL-A", "MCDONALD'S", "CHUY'S"]
-MIN_PER_COUNTY = {"Cobb": 1500, "Fulton": 3000, "Cherokee": 400}
+# What a county is allowed to lose between runs before it counts as a broken
+# scrape rather than a few closures. Establishments close, but a fifth of a
+# county does not close in a week.
+MAX_COUNTY_DROP = 0.20
+MAX_TOTAL_DROP = 0.10
+BASELINE = os.path.join(ROOT, "data", "coverage.json")
 
 
 def main():
@@ -57,16 +62,37 @@ def main():
 
     print("payload   %s" % data["generated"])
     print("places    %d" % len(places))
-    for county, n in sorted(counties.items()):
-        floor = MIN_PER_COUNTY.get(county, 0)
-        flag = "" if n >= floor else "  << LOW (expected >= %d)" % floor
-        print("  %-10s %5d%s" % (county, n, flag))
-        if n < floor:
-            failures.append("%s has only %d establishments" % (county, n))
+    # Counts are checked against the previous run rather than against numbers
+    # written down by hand. Hand-set floors do not survive 159 counties: they
+    # would all need choosing, they would all need maintaining, and any county
+    # nobody thought about would have no floor at all -- which is exactly the
+    # one that fails quietly.
+    baseline = {}
+    if os.path.exists(BASELINE):
+        with open(BASELINE, encoding="utf-8") as fh:
+            baseline = json.load(fh).get("counties", {})
 
-    for county in MIN_PER_COUNTY:
-        if county not in counties:
-            failures.append("county missing entirely: %s" % county)
+    for county, n in sorted(counties.items()):
+        was = baseline.get(county)
+        if was is None:
+            note = "  (new)"
+        else:
+            delta = n - was
+            note = "  %+d" % delta if delta else ""
+            if delta < 0 and abs(delta) > was * MAX_COUNTY_DROP:
+                failures.append("%s fell from %d to %d establishments (-%.0f%%)"
+                                % (county, was, n, 100 * abs(delta) / was))
+                note += "  << DROP"
+        print("  %-14s %5d%s" % (county, n, note))
+
+    for county, was in sorted(baseline.items()):
+        if county not in counties and was:
+            failures.append("%s was crawled before (%d places) and is missing now"
+                            % (county, was))
+
+    total_was = sum(baseline.values())
+    if total_was and len(places) < total_was * (1 - MAX_TOTAL_DROP):
+        failures.append("total fell from %d to %d places" % (total_was, len(places)))
 
     # Every place must be positioned, or it can't be sorted by distance.
     unplaced = [p for p in places if p.get("y") is None or p.get("x") is None]
@@ -137,6 +163,12 @@ def main():
         for f in failures:
             print("  - %s" % f)
         return 1
+    # Only advance the baseline once everything else agreed, so a bad run cannot
+    # quietly become the new normal for the next one to measure against.
+    with open(BASELINE, "w", encoding="utf-8") as fh:
+        json.dump({"generated": data["generated"], "counties": counties}, fh,
+                  indent=1, sort_keys=True)
+
     print("\nAll checks passed.")
     return 0
 

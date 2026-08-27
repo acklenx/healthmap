@@ -1039,6 +1039,26 @@ body.sheet-open .dock { display: none; }
 }
 .pin-cluster b { font: 700 13px/1 system-ui, -apple-system, sans-serif; font-variant-numeric: tabular-nums; }
 
+/* A county the app knows about but has not fetched. Dashed, because that is
+   this app's word for "not confirmed" everywhere else, and hollow so it reads
+   as an outline waiting to be filled rather than as data. */
+.pin-ghost {
+  display: grid;
+  place-items: center;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter: blur(2px);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.pin-ghost:hover { background: var(--surface); }
+.pin-ghost b { font: 650 12px/1 system-ui, -apple-system, sans-serif; font-variant-numeric: tabular-nums; }
+.pin-ghost small { font: 500 8.5px/1.1 system-ui, -apple-system, sans-serif; color: var(--ink-muted);
+                   max-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .map-locate {
   position: absolute;
   z-index: 900;                   /* over Leaflet's controls, which sit at 800 */
