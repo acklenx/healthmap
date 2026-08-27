@@ -501,6 +501,10 @@ main { padding: 0 14px; }
   background: var(--accent-wash);
 }
 .live[hidden] { display: none; }
+.live.is-failed { border-color: color-mix(in srgb, var(--grade-u) 45%, var(--border));
+                  background: color-mix(in srgb, var(--grade-u) 8%, transparent); }
+.live-fail { margin: 0 0 10px; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.live-fail b { display: block; color: var(--grade-u); font-size: 14px; font-weight: 660; }
 .live-top { display: flex; align-items: baseline; gap: 8px; }
 .live-title { font-size: 15px; font-weight: 650; }
 .live-clock { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600;

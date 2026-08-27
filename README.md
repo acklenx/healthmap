@@ -259,6 +259,28 @@ wherever the list is currently sorted from. It used to sit there permanently
 with a crosshair aiming it, which reads as an instruction on a screen you opened
 to look at pins.
 
+### Failing early
+
+A full crawl of 40 counties once ran for 27 minutes, crawled correctly, and
+would have been thrown away by a payload check that still carried a
+metro-Atlanta bounding box. Nothing was wrong with the crawl. Everything was
+knowable before it started.
+
+`scripts/preflight.py` runs first, and in seconds: are the planned counties
+real, do they all fit inside the coordinate bounds the payload check will later
+measure them against, does the source answer for the first of them, does the
+geocoder still match its controls. Anything it catches would have failed the
+run anyway — just an hour later, after the expensive part.
+
+Then the crawl's eight parts each get a structural check (`verify_data.py
+--quick`) rather than one verification at the end, so a part that returns
+nonsense surfaces within minutes instead of after all eight.
+
+The coverage page puts a failure at the top of the screen, names the step that
+broke, and says plainly that nothing was published — a failed run is more
+worth showing than a running one, so it stays up for the last hour rather than
+vanishing when the job stops.
+
 ### Watching a crawl
 
 The repository is public, so its Actions API is readable from the browser with

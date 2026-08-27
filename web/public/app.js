@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "1da04fb6", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "3a7f7ba3", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -1023,8 +1023,13 @@ function liveHTML(run, jobs, info) {
     ? sliceCounties(info.plan.counties, activeIndex + 1, steps.length)
     : [];
 
-  return `<div class="live-top">
-      <span class="live-title">Crawling now</span>
+  // A failure anywhere in the job is the most important thing on the screen.
+  const broken = (jobs?.jobs?.[0]?.steps || []).find((st) => st.conclusion === "failure");
+
+  return `${broken ? `<p class="live-fail"><b>Failed at “${escapeHTML(broken.name)}”.</b>
+      Nothing has been published. The steps below show how far it got.</p>` : ""}
+    <div class="live-top">
+      <span class="live-title">${broken ? "Crawl failed" : "Crawling now"}</span>
       <span class="live-clock" id="live-clock">${duration(run.run_started_at || run.created_at, null)}</span>
     </div>
     <p class="live-plan">${info.plan
@@ -1057,12 +1062,24 @@ async function refreshRuns() {
       ? runs.map((r) => runHTML(r, r.id === live?.id ? jobs : null)).join("")
       : `<p class="cover-note">No crawls have run yet.</p>`;
 
-    const info = countyStates(live, jobs);
-    if (live && info.plan) {
-      el.statusLive.className = "live";
-      el.statusLive.innerHTML = liveHTML(live, jobs, info);
+    // A run that has just failed matters more than one that is running, so the
+    // block stays up for the most recent failure too rather than disappearing
+    // the moment the job stops.
+    const recentFail = !live && runs[0]?.conclusion === "failure"
+      && Date.now() - new Date(runs[0].updated_at) < 60 * 60 * 1000
+      ? runs[0] : null;
+    const subject = live || recentFail;
+    const subjectJobs = live ? jobs
+      : recentFail ? await gh(`/runs/${recentFail.id}/jobs`).catch(() => null)
+      : null;
+
+    const info = countyStates(subject, subjectJobs);
+    if (subject && info.plan) {
+      el.statusLive.className = subject === live ? "live" : "live is-failed";
+      el.statusLive.innerHTML = liveHTML(subject, subjectJobs, info);
       el.statusLive.hidden = false;
-      startClock(live.run_started_at || live.created_at);
+      if (live) startClock(live.run_started_at || live.created_at);
+      else stopClock();
     } else {
       el.statusLive.hidden = true;
       stopClock();

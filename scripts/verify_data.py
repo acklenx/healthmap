@@ -30,6 +30,10 @@ BASELINE = os.path.join(ROOT, "data", "coverage.json")
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", default=MANIFEST)
+    ap.add_argument("--quick", action="store_true",
+                    help="structural checks only, and do not move the baseline. "
+                         "For running between the parts of a crawl, where the "
+                         "payload is real but deliberately incomplete.")
     ap.add_argument("--expect", action="append", default=[],
                     help="a name that must appear (repeatable)")
     args = ap.parse_args()
@@ -152,6 +156,15 @@ def main():
     counted = sum(p.get("hn", 0) for p in places)
     if counted != len(scores):
         failures.append("payload claims %d inspections, shards hold %d" % (counted, len(scores)))
+
+    if args.quick:
+        if failures:
+            print("\nFAILED:")
+            for f in failures:
+                print("  - %s" % f)
+            return 1
+        print("\nStructure is sound so far.")
+        return 0
 
     for expected in CANARIES + args.expect:
         hits = [n for n in names if expected.upper() in n]

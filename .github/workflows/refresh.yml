@@ -79,6 +79,22 @@ jobs:
             echo "args=--since-days 45" >> "$GITHUB_OUTPUT"
           fi
 
+      # Everything that can be known without crawling, checked first.
+      #
+      # A full crawl of 40 counties once ran for 27 minutes, crawled correctly,
+      # and would have been discarded by a payload check that still carried a
+      # metro-Atlanta bounding box. Nothing was wrong with the crawl and
+      # everything was knowable in advance -- so it is known in advance now.
+      - name: Preflight
+        env:
+          COUNTIES: ${{ github.event.inputs.counties }}
+          CHUNK: ${{ github.event.inputs.chunk }}
+        run: |
+          set -- 
+          if [ -n "$COUNTIES" ]; then set -- "$@" --counties "$COUNTIES"; fi
+          if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
+          python3 scripts/preflight.py "$@"
+
       # The crawl is split into eight steps rather than one.
       #
       # Not for parallelism -- they run in order, and the throttle is global.
@@ -101,6 +117,9 @@ jobs:
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
 
+      - name: "Check · after part 1"
+        run: python3 scripts/verify_data.py --quick
+
       - name: "Crawl · part 2 of 8"
         env:
           COUNTIES: ${{ github.event.inputs.counties }}
@@ -112,6 +131,9 @@ jobs:
           if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
+
+      - name: "Check · after part 2"
+        run: python3 scripts/verify_data.py --quick
 
       - name: "Crawl · part 3 of 8"
         env:
@@ -125,6 +147,9 @@ jobs:
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
 
+      - name: "Check · after part 3"
+        run: python3 scripts/verify_data.py --quick
+
       - name: "Crawl · part 4 of 8"
         env:
           COUNTIES: ${{ github.event.inputs.counties }}
@@ -136,6 +161,9 @@ jobs:
           if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
+
+      - name: "Check · after part 4"
+        run: python3 scripts/verify_data.py --quick
 
       - name: "Crawl · part 5 of 8"
         env:
@@ -149,6 +177,9 @@ jobs:
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
 
+      - name: "Check · after part 5"
+        run: python3 scripts/verify_data.py --quick
+
       - name: "Crawl · part 6 of 8"
         env:
           COUNTIES: ${{ github.event.inputs.counties }}
@@ -160,6 +191,9 @@ jobs:
           if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
+
+      - name: "Check · after part 6"
+        run: python3 scripts/verify_data.py --quick
 
       - name: "Crawl · part 7 of 8"
         env:
@@ -173,6 +207,9 @@ jobs:
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
 
+      - name: "Check · after part 7"
+        run: python3 scripts/verify_data.py --quick
+
       - name: "Crawl · part 8 of 8"
         env:
           COUNTIES: ${{ github.event.inputs.counties }}
@@ -184,6 +221,9 @@ jobs:
           if [ -n "$CHUNK" ];    then set -- "$@" --chunk "$CHUNK"; fi
           if [ -n "$DELAY" ];    then set -- "$@" --delay "$DELAY"; fi
           python3 crawler/crawl.py "$@"
+
+      - name: "Check · after part 8"
+        run: python3 scripts/verify_data.py --quick
 
       # A scrape fails quietly: upstream markup changes and the payload comes
       # back empty while everything still "succeeds". Fail the run instead of
