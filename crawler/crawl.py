@@ -33,6 +33,38 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Overridable so a preview crawl can run alongside the real one.
 DATA = os.environ.get("SCORE_DATA_DIR", os.path.join(ROOT, "data"))
 WEB_PUBLIC = os.environ.get("SCORE_WEB_DIR", os.path.join(ROOT, "web", "public"))
+# Every county in Georgia. Hardcoded rather than scraped: the list has not
+# changed since 1924, and a static tuple has no per-county maintenance cost --
+# which is the property that matters, since the whole point of sharding by
+# county is that adding one should be a data change and nothing else.
+GEORGIA = [
+    "Appling", "Atkinson", "Bacon", "Baker", "Baldwin", "Banks", "Barrow",
+    "Bartow", "Ben Hill", "Berrien", "Bibb", "Bleckley", "Brantley", "Brooks",
+    "Bryan", "Bulloch", "Burke", "Butts", "Calhoun", "Camden", "Candler",
+    "Carroll", "Catoosa", "Charlton", "Chatham", "Chattahoochee", "Chattooga",
+    "Cherokee", "Clarke", "Clay", "Clayton", "Clinch", "Cobb", "Coffee",
+    "Colquitt", "Columbia", "Cook", "Coweta", "Crawford", "Crisp", "Dade",
+    "Dawson", "Decatur", "DeKalb", "Dodge", "Dooly", "Dougherty", "Douglas",
+    "Early", "Echols", "Effingham", "Elbert", "Emanuel", "Evans", "Fannin",
+    "Fayette", "Floyd", "Forsyth", "Franklin", "Fulton", "Gilmer", "Glascock",
+    "Glynn", "Gordon", "Grady", "Greene", "Gwinnett", "Habersham", "Hall",
+    "Hancock", "Haralson", "Harris", "Hart", "Heard", "Henry", "Houston",
+    "Irwin", "Jackson", "Jasper", "Jeff Davis", "Jefferson", "Jenkins",
+    "Johnson", "Jones", "Lamar", "Lanier", "Laurens", "Lee", "Liberty",
+    "Lincoln", "Long", "Lowndes", "Lumpkin", "Macon", "Madison", "Marion",
+    "McDuffie", "McIntosh", "Meriwether", "Miller", "Mitchell", "Monroe",
+    "Montgomery", "Morgan", "Murray", "Muscogee", "Newton", "Oconee",
+    "Oglethorpe", "Paulding", "Peach", "Pickens", "Pierce", "Pike", "Polk",
+    "Pulaski", "Putnam", "Quitman", "Rabun", "Randolph", "Richmond",
+    "Rockdale", "Schley", "Screven", "Seminole", "Spalding", "Stephens",
+    "Stewart", "Sumter", "Talbot", "Taliaferro", "Tattnall", "Taylor",
+    "Telfair", "Terrell", "Thomas", "Tift", "Toombs", "Towns", "Treutlen",
+    "Troup", "Turner", "Twiggs", "Union", "Upson", "Walker", "Walton", "Ware",
+    "Warren", "Washington", "Wayne", "Webster", "Wheeler", "White",
+    "Whitfield", "Wilcox", "Wilkes", "Wilkinson", "Worth",
+]
+
+# What a run crawls by default. Widen with --counties, or --counties all.
 COUNTIES = ["Cobb", "Cherokee", "Fulton"]
 PAYLOAD_VERSION = 1
 
@@ -106,11 +138,87 @@ def crawl_county(county, since, until, workers, log=log):
 
 
 def load_store():
-    path = os.path.join(DATA, "store.json")
-    if not os.path.exists(path):
-        return {}
-    with open(path, encoding="utf-8") as fh:
-        return {int(k): v for k, v in json.load(fh).get("places", {}).items()}
+    """Rebuild the previous run's state from what it published.
+
+    There used to be a data/store.json holding a second copy of all of this. It
+    was the largest thing in the repository, it was rewritten in full on every
+    run whether or not anything changed, and it could drift out of agreement
+    with the payload it was supposed to be the source of. Everything in it is
+    recoverable from the shards, so it is gone.
+
+    Establishments that never made it into the payload -- no coordinates yet,
+    or no inspections on record -- are kept in data/pending.json, because those
+    are exactly the ones an incremental crawl would not rediscover.
+    """
+    store = {}
+
+    manifest_path = os.path.join(WEB_PUBLIC, "counties.json")
+    if os.path.exists(manifest_path):
+        with open(manifest_path, encoding="utf-8") as fh:
+            counties = [c["c"] for c in json.load(fh)["counties"]]
+    else:
+        counties = []
+
+    history = {}
+    hist_dir = os.path.join(WEB_PUBLIC, "history")
+    if os.path.isdir(hist_dir):
+        for name in os.listdir(hist_dir):
+            if not name.endswith(".json"):
+                continue
+            with open(os.path.join(hist_dir, name), encoding="utf-8") as fh:
+                history.update(json.load(fh))
+
+    for county in counties:
+        path = os.path.join(WEB_PUBLIC, "places", "%s.json" % slug(county))
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as fh:
+            for p in json.load(fh):
+                store[p["i"]] = {
+                    "id": p["i"], "name": p["n"], "street": p["a"],
+                    "city": p["c"], "zip": p["z"], "county": p["o"],
+                    "lat": p["y"], "lon": p["x"], "precision": p["p"],
+                    "inspections": [
+                        {"date": d, "score": sc, "insp_id": ii}
+                        for d, sc, ii in history.get(str(p["i"]), [])
+                    ],
+                }
+
+    # One-time migration off the old single-file store. Harmless once it is
+    # gone, which is the point: nothing has to remember to remove this.
+    legacy = os.path.join(DATA, "store.json")
+    if not store and os.path.exists(legacy):
+        with open(legacy, encoding="utf-8") as fh:
+            store = {int(k): v for k, v in json.load(fh).get("places", {}).items()}
+        log("Migrated %d establishments from the legacy store." % len(store))
+
+    pending_path = os.path.join(DATA, "pending.json")
+    if os.path.exists(pending_path):
+        with open(pending_path, encoding="utf-8") as fh:
+            for k, v in json.load(fh).get("places", {}).items():
+                store.setdefault(int(k), v)
+
+    return store
+
+
+def slug(county):
+    """A county name as a filename: lowercase, spaces to hyphens."""
+    return county.lower().replace(" ", "-")
+
+
+def write_shards(directory, shards):
+    """Write every shard, and delete any file that is no longer one.
+
+    A county that loses its last establishment, or a ZIP that empties out, has
+    to take its file with it -- otherwise the directory keeps serving something
+    the manifest no longer points at.
+    """
+    os.makedirs(directory, exist_ok=True)
+    for key, body in shards.items():
+        save_json(os.path.join(directory, "%s.json" % key), body, compact=True)
+    for stale in os.listdir(directory):
+        if stale.endswith(".json") and stale[:-5] not in shards:
+            os.remove(os.path.join(directory, stale))
 
 
 def save_json(path, obj, compact=False):
@@ -190,12 +298,40 @@ def build_payload(store):
                 "hn": len(history),
             }
         )
-    return {
-        "v": PAYLOAD_VERSION,
-        "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "counties": COUNTIES,
-        "places": places,
-    }
+    return places
+
+
+def build_shards(places):
+    """Group the payload by county, and describe each group in a manifest.
+
+    The client loads the county it is standing in, draws the list from that,
+    and pulls neighbouring counties outwards while you read -- so the manifest
+    carries what it needs to rank them without downloading any of them: a
+    centroid to measure from and a bounding box to measure to.
+
+    Sharding also makes a run's commit a delta. The payload used to be one file
+    rewritten in full every time, so git stored a new copy of all of it whether
+    or not a single score had moved. Now only the counties that actually
+    changed get written.
+    """
+    by_county = {}
+    for p in places:
+        by_county.setdefault(p["o"], []).append(p)
+
+    manifest = []
+    for county, rows in sorted(by_county.items()):
+        lats = [r["y"] for r in rows]
+        lons = [r["x"] for r in rows]
+        manifest.append({
+            "c": county,
+            "s": slug(county),
+            "n": len(rows),
+            "y": round(sum(lats) / len(lats), 5),
+            "x": round(sum(lons) / len(lons), 5),
+            "b": [round(min(lats), 5), round(min(lons), 5),
+                  round(max(lats), 5), round(max(lons), 5)],
+        })
+    return by_county, manifest
 
 
 def build_history(store):
@@ -228,7 +364,8 @@ def main():
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--full", action="store_true", help="crawl all available history")
     g.add_argument("--since-days", type=int, default=45, help="crawl the last N days")
-    ap.add_argument("--counties", default=",".join(COUNTIES))
+    ap.add_argument("--counties", default=",".join(COUNTIES),
+                    help="comma-separated county names, or 'all' for Georgia")
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--limit-pages", type=int, default=0, help="debug: stop early")
     ap.add_argument("--skip-geocode", action="store_true")
@@ -236,7 +373,11 @@ def main():
                     help="skip the crawl; re-geocode and rebuild the payload from store.json")
     args = ap.parse_args()
 
-    counties = [c.strip() for c in args.counties.split(",") if c.strip()]
+    counties = (GEORGIA if args.counties.strip().lower() == "all"
+                else [c.strip() for c in args.counties.split(",") if c.strip()])
+    unknown = [c for c in counties if c not in GEORGIA]
+    if unknown:
+        sys.exit("unknown counties: %s" % ", ".join(unknown))
     until = date.today() + timedelta(days=1)
     since = date(2010, 1, 1) if args.full else until - timedelta(days=args.since_days)
     log("Crawling %s from %s to %s" % (", ".join(counties), since, until))
@@ -265,36 +406,44 @@ def main():
         geocode.resolve(list(store.values()), cache, log=log)
         cache.save()
 
-    save_json(os.path.join(DATA, "store.json"), {"places": {str(k): v for k, v in store.items()}})
-    payload = build_payload(store)
-    save_json(os.path.join(WEB_PUBLIC, "places.json"), payload, compact=True)
+    places = build_payload(store)
+    generated = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-    # History shards. Written fresh each run and stale ones removed, so a ZIP
-    # that loses its last establishment does not leave a file behind that the
-    # payload no longer points at.
-    hist_dir = os.path.join(WEB_PUBLIC, "history")
-    os.makedirs(hist_dir, exist_ok=True)
-    shards = build_history(store)
-    for zipcode, entries in shards.items():
-        save_json(os.path.join(hist_dir, "%s.json" % zipcode), entries, compact=True)
-    for stale in os.listdir(hist_dir):
-        if stale.endswith(".json") and stale[:-5] not in shards:
-            os.remove(os.path.join(hist_dir, stale))
+    # Anything the payload cannot carry -- no coordinates yet, or no
+    # inspections on record. Small, and kept because an incremental crawl would
+    # not rediscover it.
+    published = {p["i"] for p in places}
+    pending = {str(k): v for k, v in store.items() if k not in published}
+    save_json(os.path.join(DATA, "pending.json"), {"places": pending})
+
+    by_county, manifest = build_shards(places)
+    save_json(
+        os.path.join(WEB_PUBLIC, "counties.json"),
+        {"v": PAYLOAD_VERSION, "generated": generated,
+         "places": len(places), "counties": manifest},
+        compact=True,
+    )
+    write_shards(os.path.join(WEB_PUBLIC, "places"),
+                 {slug(c): rows for c, rows in by_county.items()})
+    write_shards(os.path.join(WEB_PUBLIC, "history"), build_history(store))
     save_json(
         os.path.join(DATA, "changes.json"),
-        {"generated": payload["generated"], "changes": all_changes},
+        {"generated": generated, "changes": all_changes},
     )
     # The client polls this tiny file to decide whether to re-download the
     # dataset, and requests places.json?v=<generated> so the payload URL only
     # changes when the data does. That is what makes permanent caching safe.
     save_json(
         os.path.join(WEB_PUBLIC, "version.json"),
-        {"generated": payload["generated"], "places": len(payload["places"])},
+        {"generated": generated, "places": len(places)},
     )
 
-    size = os.path.getsize(os.path.join(WEB_PUBLIC, "places.json"))
-    placed = len(payload["places"])
-    exact = sum(1 for p in payload["places"] if p["p"] == 2)
+    size = sum(
+        os.path.getsize(os.path.join(WEB_PUBLIC, "places", f))
+        for f in os.listdir(os.path.join(WEB_PUBLIC, "places"))
+    )
+    placed = len(places)
+    exact = sum(1 for p in places if p["p"] == 2)
     log(
         "Done in %.0fs: %d establishments (%d placed, %d exact), "
         "%d new inspections, payload %.1f KB"

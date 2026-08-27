@@ -15,7 +15,7 @@ import sys
 from collections import Counter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PAYLOAD = os.path.join(ROOT, "web", "public", "places.json")
+MANIFEST = os.path.join(ROOT, "web", "public", "counties.json")
 
 # Chains large enough that their absence means the crawl broke, not that they closed.
 CANARIES = ["WAFFLE HOUSE", "CHICK-FIL-A", "MCDONALD'S", "CHUY'S"]
@@ -24,16 +24,34 @@ MIN_PER_COUNTY = {"Cobb": 1500, "Fulton": 3000, "Cherokee": 400}
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--payload", default=PAYLOAD)
+    ap.add_argument("--manifest", default=MANIFEST)
     ap.add_argument("--expect", action="append", default=[],
                     help="a name that must appear (repeatable)")
     args = ap.parse_args()
 
-    with open(args.payload, encoding="utf-8") as fh:
+    with open(args.manifest, encoding="utf-8") as fh:
         data = json.load(fh)
 
-    places = data["places"]
+    # The list is one file per county now, so read them back through the
+    # manifest -- which also checks the manifest actually points at real files.
+    pub = os.path.dirname(args.manifest)
+    places = []
     failures = []
+    for entry in data["counties"]:
+        shard = os.path.join(pub, "places", "%s.json" % entry["s"])
+        if not os.path.exists(shard):
+            failures.append("manifest lists %s but %s is missing" % (entry["c"], shard))
+            continue
+        with open(shard, encoding="utf-8") as fh:
+            rows = json.load(fh)
+        if len(rows) != entry["n"]:
+            failures.append("%s: manifest says %d places, shard holds %d"
+                            % (entry["c"], entry["n"], len(rows)))
+        places.extend(rows)
+
+    if len(places) != data["places"]:
+        failures.append("manifest totals %d places, shards hold %d"
+                        % (data["places"], len(places)))
     names = [p["n"].upper() for p in places]
     counties = Counter(p["o"] for p in places)
 

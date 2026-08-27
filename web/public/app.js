@@ -3,14 +3,19 @@
  * Caching strategy (this data barely moves — inspections land a few times a
  * year per restaurant, and a *past* inspection never changes at all):
  *
- *   places.json   Requested as `places.json?v=<stamp>`. The URL only changes
- *                 when the crawler publishes new data, so the service worker
- *                 can hold it forever and cold starts are instant and offline.
- *   version.json  A few bytes. Checked at most once every CHECK_INTERVAL, and
- *                 never on the critical path -- the app renders from the cached
- *                 payload first and swaps in new data only if the stamp moved.
- *   /api/report   An inspection report for a past date is immutable, so these
- *                 are cached permanently on first view.
+ *   counties.json  The manifest: every county with a place count, a centroid
+ *                  and a bounding box. A few KB, and enough to decide what to
+ *                  download without downloading any of it.
+ *   places/<county>.json  The list, one shard per county, pulled nearest
+ *                  first. Statewide this is the difference between two
+ *                  megabytes and the one county you are standing in.
+ *   history/<zip>.json    Inspection history, fetched when a place is opened.
+ *
+ *   All three are requested as `?v=<stamp>`, so a URL's contents never change
+ *   and the previous generation is evicted when a new stamp arrives.
+ *
+ *   version.json is deliberately never cached: it is the freshness probe, a
+ *   few bytes, and caching it would defeat the entire scheme.
  */
 
 const CHECK_INTERVAL = 6 * 60 * 60 * 1000;   // how often to look for new data
@@ -21,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "7f0acdf9", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "52228691", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -79,6 +84,10 @@ const locEl = {
 const state = {
   places: [],
   generated: null,
+  // The county manifest, and which of its shards are in `places` so far. The
+  // list arrives a county at a time, nearest first.
+  manifest: null,
+  loaded: new Set(),
   // home  = where distances are measured from. Persisted; drives the whole app.
   // gps   = the device's own last fix. Live, never persisted, never sorts.
   // They are separate so that looking somewhere else on the map doesn't lose
@@ -218,14 +227,25 @@ function titleCase(s) {
 
 /* ---------------------------------------------------------------- data --- */
 
+/* How far out to pull counties before stopping.
+ *
+ * Somewhere you would plausibly drive for lunch. Beyond that the shards are
+ * bytes nobody reads -- and the manifest is still there, so anything further
+ * is one request away the moment a search or a moved home pin needs it. */
+const NEARBY_MILES = 20;
+const ENOUGH_PLACES = 1500;
+// Below this, the whole state is small enough to just load. Three counties is;
+// all 159 is not.
+const WHOLE_DATASET_PLACES = 20000;
+
 async function loadData() {
   const known = localStorage.getItem(KEY.version);
 
   if (known) {
-    // Fast path: the service worker answers this from cache, offline included.
-    // The app is on screen and usable before any network request is made.
+    // Fast path: the service worker answers these from cache, offline
+    // included. The app is on screen and usable before any network request.
     try {
-      applyPayload(await fetchPayload(known));
+      await loadGeneration(known);
     } catch {
       /* cache miss — the update check below will fetch it */
     }
@@ -233,9 +253,142 @@ async function loadData() {
   await checkForUpdate();
 }
 
+/** Load (or reload) everything belonging to one published generation. */
+async function loadGeneration(stamp) {
+  const manifest = await fetchManifest(stamp);
+  state.generated = manifest.generated;
+  state.manifest = manifest;
+  state.places = [];
+  state.loaded = new Set();
+  countyLoads.clear();
+  historyShards.clear();
+
+  const order = countyOrder(manifest);
+
+  // With no position there is no "nearest", and guessing means downloading the
+  // biggest county in the state to somebody three hundred miles from it. Small
+  // datasets are loaded whole because that costs nothing and keeps search
+  // honest; past that, wait to be told where they are.
+  if (!state.home && !state.gps && manifest.places > WHOLE_DATASET_PLACES) {
+    render();
+    return;
+  }
+
+  // Await only the first. The nearest twenty places are almost certainly in
+  // the county you are standing in, so the list is right as soon as it lands.
+  await addCounty(order[0], stamp);
+  render();
+  loadNearby(order.slice(1), stamp);
+}
+
+/** Pull the rest outwards, re-rendering as each arrives. */
+async function loadNearby(order, stamp) {
+  for (const county of order) {
+    if (state.loaded.has(county.s)) continue;
+    if (state.places.length >= ENOUGH_PLACES && county.d > NEARBY_MILES) break;
+    try {
+      await addCounty(county, stamp);
+      render();
+    } catch {
+      /* one county failing should not stop the others */
+    }
+  }
+  syncCoverage();
+}
+
+/** Everything the manifest knows about that is not loaded yet. */
+function unloadedCounties() {
+  if (!state.manifest) return [];
+  return state.manifest.counties.filter((c) => !state.loaded.has(c.s));
+}
+
+/** Load the lot. The escape hatch for searching outside what is nearby. */
+async function loadEverything() {
+  const stamp = state.generated;
+  for (const county of countyOrder(state.manifest)) {
+    if (state.loaded.has(county.s)) continue;
+    try {
+      await addCounty(county, stamp);
+      render();
+    } catch { /* keep going */ }
+  }
+  syncCoverage();
+}
+
+/** Home moved far enough that other counties are now the near ones. */
+function reconsiderCoverage() {
+  if (!state.manifest || !state.generated) return;
+  loadNearby(countyOrder(state.manifest), state.generated);
+}
+
+/* In-flight county fetches, keyed synchronously.
+ *
+ * Two things start this: the initial load, and a position arriving a moment
+ * later and changing which counties are nearest. Marking `loaded` only after
+ * the await let both win the race and append the same shard twice -- 700
+ * duplicate rows, and a list with each of them in it twice. */
+const countyLoads = new Map();
+
+function addCounty(county, stamp) {
+  if (!county) return Promise.resolve();
+  const inflight = countyLoads.get(county.s);
+  if (inflight) return inflight;
+  if (state.loaded.has(county.s)) return Promise.resolve();
+
+  const job = ingestCounty(county, stamp).catch((err) => {
+    countyLoads.delete(county.s);        // let a later pass retry
+    throw err;
+  });
+  countyLoads.set(county.s, job);
+  return job;
+}
+
+async function ingestCounty(county, stamp) {
+  const rows = await fetchCounty(county, stamp);
+  if (state.loaded.has(county.s)) return;
+  state.loaded.add(county.s);
+  for (const p of rows) {
+    state.places.push({
+      id: p.i,
+      name: titleCase(p.n),
+      street: titleCase(p.a),
+      city: titleCase(p.c),
+      zip: p.z,
+      county: p.o,
+      lat: p.y,
+      lon: p.x,
+      precision: p.p,
+      // Full history arrives with the ZIP's shard, on demand. The list only
+      // ever needed the latest score -- for the badge, and to sort by -- and
+      // carrying the rest was half the wire size of the payload.
+      history: null,
+      historyCount: p.hn,
+      // Precomputed once so filtering/searching stays cheap across ~13k rows.
+      search: `${p.n} ${p.a} ${p.c}`.toLowerCase(),
+      latest: p.l ? { date: p.l[0], score: p.l[1], inspId: p.l[2] } : null,
+    });
+  }
+  syncCoverage();
+}
+
+/** Say what is actually loaded, rather than implying it is everything. */
+function syncCoverage() {
+  if (!state.manifest) return;
+  const loaded = state.manifest.counties.filter((c) => state.loaded.has(c.s));
+  const rest = unloadedCounties();
+  const names = loaded.map((c) => c.c).sort();
+  const where = names.length <= 4
+    ? names.join(", ")
+    : `${names.length} counties`;
+  el.freshness.textContent =
+    `${state.places.length.toLocaleString()} places in ${where}` +
+    (rest.length ? ` · ${rest.length} more ${rest.length === 1 ? "county" : "counties"} available` : "") +
+    ` · data refreshed ${relativeTime(state.generated)}`;
+}
+
 /** Look for a newer dataset. Runs on every launch: it's a few bytes, it isn't
  *  on the critical path, and throttling it means a phone can sit on stale data
- *  for hours after a refresh lands. The *payload* is what we cache hard. */
+ *  for hours after a refresh lands. The *shards* are what we cache hard. */
 async function checkForUpdate() {
   const known = localStorage.getItem(KEY.version);
   try {
@@ -245,7 +398,7 @@ async function checkForUpdate() {
     localStorage.setItem(KEY.checked, String(Date.now()));
     if (generated === known && state.places.length) return;
 
-    applyPayload(await fetchPayload(generated));
+    await loadGeneration(generated);
     localStorage.setItem(KEY.version, generated);
   } catch {
     if (!state.places.length) {
@@ -262,9 +415,56 @@ document.addEventListener("visibilitychange", () => {
   if (Date.now() - last > CHECK_INTERVAL) checkForUpdate();
 });
 
-async function fetchPayload(stamp) {
-  const res = await fetch(`/places.json?v=${encodeURIComponent(stamp)}`);
-  if (!res.ok) throw new Error(`places.json: ${res.status}`);
+/* The list, one file per county, pulled nearest-first.
+ *
+ * Statewide this is ~48,000 places and a couple of megabytes; nobody in
+ * Marietta needs Valdosta to find lunch. So the manifest -- a few KB naming
+ * every county with a centroid and a bounding box -- decides the order, the
+ * county you are standing in loads first, and the rest arrive while you read.
+ *
+ * The list is usable after the first shard: the twenty nearest places are
+ * almost certainly in the county you are in. Everything re-sorts as more land.
+ */
+async function fetchManifest(stamp) {
+  const res = await fetch(`/counties.json?v=${encodeURIComponent(stamp)}`);
+  if (!res.ok) throw new Error(`counties.json: ${res.status}`);
+  return res.json();
+}
+
+/** Miles from a point to a county's bounding box; 0 when inside it.
+ *  Clamp the point into the box, then measure to where it landed. */
+function distanceToBox(lat, lon, [s, w, n, e]) {
+  return distanceMiles(
+    lat, lon,
+    Math.min(Math.max(lat, s), n),
+    Math.min(Math.max(lon, w), e),
+  );
+}
+
+/** Counties worth having, nearest first. */
+function countyOrder(manifest) {
+  const home = state.home || state.gps;
+  const rows = manifest.counties.slice();
+  if (!home) {
+    // No position yet: biggest first, so the app has something to show and a
+    // search has somewhere to look while we wait to be told where they are.
+    return rows.sort((a, b) => b.n - a.n);
+  }
+  // Bounding boxes overlap, and badly for a county shaped like Fulton -- long,
+  // narrow, and covering most of the metro's latitude. Two counties can both
+  // score zero, so the centroid breaks the tie.
+  return rows
+    .map((c) => ({
+      ...c,
+      d: distanceToBox(home.lat, home.lon, c.b),
+      dc: distanceMiles(home.lat, home.lon, c.y, c.x),
+    }))
+    .sort((a, b) => a.d - b.d || a.dc - b.dc);
+}
+
+async function fetchCounty(county, stamp) {
+  const res = await fetch(`/places/${county.s}.json?v=${encodeURIComponent(stamp)}`);
+  if (!res.ok) throw new Error(`places/${county.s}: ${res.status}`);
   return res.json();
 }
 
@@ -307,32 +507,6 @@ function loadHistoryShard(zip) {
   return pending;
 }
 
-function applyPayload(payload) {
-  state.places = payload.places.map((p) => ({
-    id: p.i,
-    name: titleCase(p.n),
-    street: titleCase(p.a),
-    city: titleCase(p.c),
-    zip: p.z,
-    county: p.o,
-    lat: p.y,
-    lon: p.x,
-    precision: p.p,
-    // Full history arrives with the ZIP's shard, on demand. The list only ever
-    // needed the latest score -- for the badge, and to sort by -- and carrying
-    // the rest was half the wire size of the payload.
-    history: null,
-    historyCount: p.hn,
-    // Precomputed once so filtering/searching stays cheap across ~13k rows.
-    search: `${p.n} ${p.a} ${p.c}`.toLowerCase(),
-    latest: p.l ? { date: p.l[0], score: p.l[1], inspId: p.l[2] } : null,
-  }));
-  state.generated = payload.generated;
-  el.freshness.textContent =
-    `${state.places.length.toLocaleString()} places in ${payload.counties.join(", ")} · ` +
-    `data refreshed ${relativeTime(payload.generated)}`;
-  render();
-}
 
 /* ------------------------------------------------------------ location --- */
 
@@ -351,6 +525,8 @@ function setGps(lat, lon) {
 /** Move the point everything is measured from. `pinned` records that a human
  *  put it there, so a later background fix leaves it alone. */
 function setHome(lat, lon, label, { pinned = true, recenter = false } = {}) {
+  // Moving home changes which counties are the near ones.
+  queueMicrotask(reconsiderCoverage);
   state.home = { lat, lon, label, at: Date.now(), pinned };
   writeJSON(KEY.pos, state.home);
   setLocateState("on", label);
@@ -879,13 +1055,24 @@ function render({ recompute = true } = {}) {
   el.status.hidden = state.places.length > 0;
   el.empty.hidden = state.view.length > 0 || !state.places.length;
   if (!el.empty.hidden) {
-    el.empty.textContent = state.query
-      ? `No restaurants match “${state.query}”.`
+    // Only the nearby counties are loaded, so "no results" can mean "not here"
+    // rather than "nowhere". Say which, and offer the rest.
+    const rest = unloadedCounties();
+    const scope = rest.length
+      ? ` Only the ${state.manifest.counties.length - rest.length} ${
+          state.manifest.counties.length - rest.length === 1 ? "county" : "counties"
+        } nearest you are loaded.`
+      : "";
+    el.empty.innerHTML = (state.query
+      ? `No restaurants match “${escapeHTML(state.query)}”.${scope}`
       : state.filter === "fav"
         ? "Nothing saved yet. Open a restaurant and tap Save."
         : state.grades.size < GRADE_BANDS.length
           ? `No ${[...state.grades].join(", ")} scores here. Turn more grades on, or move the map.`
-          : "Nothing matches those filters.";
+          : `Nothing matches those filters.${scope}`) +
+      (rest.length && (state.query || state.filter === "all")
+        ? ` <button id="load-all" class="linkish" type="button">Search all of Georgia</button>`
+        : "");
   }
   if (state.sort === "dist" && !state.home && state.places.length) {
     el.status.hidden = false;
@@ -1744,6 +1931,13 @@ document.querySelectorAll("[data-grade]").forEach((b) =>
 el.filterBtn.addEventListener("click", openFilterSheet);
 // One locate behaviour, three places to reach it.
 el.mapLocate.addEventListener("click", () => el.locate.click());
+
+el.empty.addEventListener("click", (e) => {
+  if (!e.target.closest("#load-all")) return;
+  e.target.textContent = "Loading…";
+  e.target.disabled = true;
+  loadEverything();
+});
 
 el.searchBtn.addEventListener("click", () =>
   el.dockSearch.hidden ? openSearch() : closeSearch()

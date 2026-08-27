@@ -4,9 +4,9 @@
  *
  *   shell     App code, Leaflet included. Versioned by SHELL_VERSION; replaced
  *             on activate.
- *   data      places.json?v=<stamp>. The stamp changes only when the crawler
- *             publishes, so a cached copy is correct forever. Old stamps are
- *             evicted on activate.
+ *   data      counties.json and places/<county>.json, both ?v=<stamp>. The
+ *             stamp changes only when the crawler publishes, so a cached copy
+ *             is correct forever; a new stamp evicts the previous generation.
  *   history   history/<zip>.json?v=<stamp>, fetched when a place is opened.
  *             Same reasoning, but many URLs rather than one, so the eviction
  *             keeps every shard carrying the current stamp and drops the rest.
@@ -19,7 +19,7 @@
  * few bytes, and caching it would defeat the entire scheme.
  */
 
-const SHELL_VERSION = "7f0acdf9";
+const SHELL_VERSION = "52228691";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const HISTORY = "history-v1";
@@ -32,12 +32,12 @@ const TILE_LIMIT = 900;      // roughly a couple of towns' worth, at a few kB ea
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?cache-id=7f0acdf9",
-  "/app.js?cache-id=7f0acdf9",
+  "/styles.css?cache-id=52228691",
+  "/app.js?cache-id=52228691",
   // Loaded on demand when something is shared, precached for the same reason
   // Leaflet is: the moment you want it is not a good moment to need the network.
-  "/qr.js?cache-id=7f0acdf9",
-  "/manifest.webmanifest?cache-id=7f0acdf9",
+  "/qr.js?cache-id=52228691",
+  "/manifest.webmanifest?cache-id=52228691",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least
   // likely to have signal to spare.
@@ -159,8 +159,11 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname === "/version.json") return;  // always live
 
-  if (url.pathname === "/places.json") {
-    event.respondWith(immutable(request, DATA, { prune: true }));
+  // The manifest and the county shards, all stamped with the generation they
+  // belong to. Same reasoning as the history shards below: immutable for that
+  // stamp, and the whole previous generation is dropped when a new one lands.
+  if (url.pathname === "/counties.json" || url.pathname.startsWith("/places/")) {
+    event.respondWith(immutable(request, DATA, { pruneStale: url.searchParams.get("v") }));
     return;
   }
 

@@ -136,8 +136,8 @@ def main():
     ap.add_argument("--host", default="0.0.0.0")
     args = ap.parse_args()
 
-    if not os.path.exists(os.path.join(PUBLIC, "places.json")):
-        print("! web/public/places.json is missing -- run crawler/crawl.py first")
+    if not os.path.exists(os.path.join(PUBLIC, "counties.json")):
+        print("! web/public/counties.json is missing -- run crawler/crawl.py first")
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     print("Score dev server -> http://localhost:%d" % args.port)

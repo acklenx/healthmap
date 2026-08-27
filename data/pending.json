@@ -1,0 +1,305 @@
+{
+ "places": {
+  "1283045": {
+   "city": "",
+   "county": "Fulton",
+   "id": 1283045,
+   "inspections": [
+    {
+     "date": "2011-04-06",
+     "insp_id": 1517304,
+     "score": 99
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "TEST RESTAURANT",
+   "street": "123 PEACHTREE ST ATLANTA, GA 30303",
+   "zip": ""
+  },
+  "12991166": {
+   "city": "ATLANTA",
+   "county": "Fulton",
+   "id": 12991166,
+   "inspections": [
+    {
+     "date": "2024-04-24",
+     "insp_id": 57403950,
+     "score": 71
+    },
+    {
+     "date": "2024-05-07",
+     "insp_id": 57405795,
+     "score": 72
+    },
+    {
+     "date": "2025-04-15",
+     "insp_id": 57461782,
+     "score": 85
+    },
+    {
+     "date": "2025-11-18",
+     "insp_id": 57498067,
+     "score": 95
+    },
+    {
+     "date": "2026-05-05",
+     "insp_id": 57528335,
+     "score": 96
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Get Fruity Cafe",
+   "street": "6740 SHANNON PKWY",
+   "zip": "30329"
+  },
+  "2418013": {
+   "city": "",
+   "county": "Fulton",
+   "id": 2418013,
+   "inspections": [
+    {
+     "date": "2011-09-30",
+     "insp_id": 3904718,
+     "score": 97
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Yumbii #2",
+   "street": "1465 CHATTAHOOCHEE AVE ATLANTA, GA 30318",
+   "zip": ""
+  },
+  "2490499": {
+   "city": "",
+   "county": "Fulton",
+   "id": 2490499,
+   "inspections": [
+    {
+     "date": "2012-06-04",
+     "insp_id": 4564295,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "T.N.T.",
+   "street": "895 JOSEPH E. BOONE ATLANTA, GA 30314",
+   "zip": ""
+  },
+  "3135465": {
+   "city": "ATLANTA",
+   "county": "Fulton",
+   "id": 3135465,
+   "inspections": [
+    {
+     "date": "2023-08-28",
+     "insp_id": 57365261,
+     "score": 93
+    },
+    {
+     "date": "2024-11-18",
+     "insp_id": 57437130,
+     "score": 90
+    },
+    {
+     "date": "2025-06-30",
+     "insp_id": 57473994,
+     "score": 91
+    },
+    {
+     "date": "2025-12-10",
+     "insp_id": 57501749,
+     "score": 96
+    },
+    {
+     "date": "2026-06-15",
+     "insp_id": 57535725,
+     "score": 94
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Henderson Student Center - Main Kitchen",
+   "street": "765 ATLANTA STUDENT MOVEMENT BLVD",
+   "zip": "30214"
+  },
+  "7960884": {
+   "city": "MARIETTA",
+   "county": "Cobb",
+   "id": 7960884,
+   "inspections": [
+    {
+     "date": "2022-03-22",
+     "insp_id": 57296285,
+     "score": 91
+    },
+    {
+     "date": "2023-02-09",
+     "insp_id": 57337515,
+     "score": 100
+    },
+    {
+     "date": "2024-03-04",
+     "insp_id": 57396269,
+     "score": 91
+    },
+    {
+     "date": "2025-11-04",
+     "insp_id": 57495529,
+     "score": 100
+    },
+    {
+     "date": "2026-08-24",
+     "insp_id": 57548716,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "EUREST DINING LOCKHEED MARTIN B2-107",
+   "street": "86 S COBB DR SE",
+   "zip": "30063"
+  },
+  "7960909": {
+   "city": "MARIETTA",
+   "county": "Cobb",
+   "id": 7960909,
+   "inspections": [
+    {
+     "date": "2021-09-16",
+     "insp_id": 57272649,
+     "score": 100
+    },
+    {
+     "date": "2022-03-22",
+     "insp_id": 57296096,
+     "score": 100
+    },
+    {
+     "date": "2023-02-09",
+     "insp_id": 57337520,
+     "score": 100
+    },
+    {
+     "date": "2025-11-04",
+     "insp_id": 57495495,
+     "score": 100
+    },
+    {
+     "date": "2026-08-24",
+     "insp_id": 57548710,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "EUREST DINING LOCKHEED MARTIN MAIN KITCHEN B-107",
+   "street": "86 S COBB DR SE",
+   "zip": "30063"
+  },
+  "875496": {
+   "city": "",
+   "county": "Fulton",
+   "id": 875496,
+   "inspections": [
+    {
+     "date": "2011-09-12",
+     "insp_id": 1653639,
+     "score": 92
+    },
+    {
+     "date": "2012-03-16",
+     "insp_id": 4285243,
+     "score": 94
+    },
+    {
+     "date": "2012-09-26",
+     "insp_id": 5500729,
+     "score": 96
+    },
+    {
+     "date": "2013-07-09",
+     "insp_id": 11526322,
+     "score": 96
+    },
+    {
+     "date": "2014-02-28",
+     "insp_id": 12509823,
+     "score": 97
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Fellini's Pizza",
+   "street": "4429 ROSWELL RD ATLANTA, GA 30342",
+   "zip": ""
+  },
+  "884570": {
+   "city": "RED OAK",
+   "county": "Fulton",
+   "id": 884570,
+   "inspections": [
+    {
+     "date": "2023-01-26",
+     "insp_id": 57334401,
+     "score": 91
+    },
+    {
+     "date": "2023-11-20",
+     "insp_id": 57379666,
+     "score": 95
+    },
+    {
+     "date": "2025-01-07",
+     "insp_id": 57443993,
+     "score": 100
+    },
+    {
+     "date": "2025-11-04",
+     "insp_id": 57495648,
+     "score": 100
+    },
+    {
+     "date": "2026-04-09",
+     "insp_id": 57523485,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "The Peking Restaurant",
+   "street": "3461 ROOSEVELT HWY",
+   "zip": "30272"
+  },
+  "886590": {
+   "city": "",
+   "county": "Fulton",
+   "id": 886590,
+   "inspections": [
+    {
+     "date": "2010-10-19",
+     "insp_id": 1355165,
+     "score": 97
+    },
+    {
+     "date": "2012-03-21",
+     "insp_id": 4285584,
+     "score": 98
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Taco Bell",
+   "street": "1761 HOWELL MILL NW ATLANTA, GA 30318",
+   "zip": ""
+  },
+  "890926": {
+   "city": "",
+   "county": "Fulton",
+   "id": 890926,
+   "inspections": [
+    {
+     "date": "2010-10-29",
+     "insp_id": 1428463,
+     "score": 98
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "SAVANNAH'S",
+   "street": "3342 PEACHTREE RD ATLANTA, GA 30326",
+   "zip": ""
+  }
+ }
+}

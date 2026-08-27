@@ -28,10 +28,23 @@ GitHub Actions (nightly)          Cloudflare Pages (free)
                                    tile.openstreetmap.org
 ```
 
-**The list is a static file.** Every establishment, with its position and its
-latest score, is one download the phone sorts locally. That is why there is no
-"search server" and no database of restaurants: distance sorting happens on the
-device, instantly, offline.
+**The list is static files, one per county.** A manifest names every county
+with a place count, a centroid and a bounding box — a few KB, enough to decide
+what to download without downloading any of it. The county you are standing in
+loads first and the list is usable immediately, because the nearest twenty
+places are almost certainly in it; the rest arrive outwards while you read, and
+everything re-sorts as they land. There is no "search server" and no database:
+distance sorting happens on the device, instantly, offline.
+
+Sharding is as much about the repository as the wire. A single payload file was
+rewritten in full on every run, so git stored a fresh copy of all of it whether
+or not one score had moved. Per county, only the counties that actually changed
+get written — and at 0–40 new inspections a run, that is a handful.
+
+Coverage stops at 20 miles once there are enough places to be useful. Beyond
+that the shards are bytes nobody reads, and the manifest means anything further
+is one request away the moment a search or a moved home pin needs it — an empty
+search offers to load the rest of the state.
 
 **Inspection history ships separately, one file per ZIP.** It was half the wire
 size of the payload and the list needs none of it — only the latest score, to
@@ -43,9 +56,12 @@ cost nothing.
 
 | | Gzipped |
 |---|---|
-| before, one file | 0.62 MB |
-| `places.json` now | **0.38 MB** |
+| one file, everything | 0.62 MB |
+| `counties.json` | 0.2 KB (three counties; ~5 KB statewide) |
+| `places/<county>.json` | Cherokee 26 KB · Cobb 88 KB · Fulton 241 KB |
 | `history/<zip>.json` | 3.1 KB median, 13.7 KB largest |
+
+Standing in Woodstock that is a 26 KB first paint instead of 620 KB.
 
 **Inspection reports are fetched on demand.** There are tens of thousands of
 individual reports and almost none will ever be opened, so `/api/report` proxies

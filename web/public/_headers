@@ -47,9 +47,12 @@
 /screenshots/*
   Cache-Control: public, max-age=604800
 
-# Requested as places.json?v=<generated>, stamped by the crawler rather than by
-# stamp_assets.py -- it changes on a different schedule to the app.
-/places.json
+# Stamped by the crawler as ?v=<generated> rather than by stamp_assets.py --
+# the data changes on a different schedule to the app.
+/counties.json
+  Cache-Control: public, max-age=31536000, immutable
+
+/places/*
   Cache-Control: public, max-age=31536000, immutable
 
 # Same stamp as the payload, same reasoning.

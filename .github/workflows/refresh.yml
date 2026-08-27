@@ -1,4 +1,4 @@
-# Nightly refresh of the inspection data.
+# Weekly refresh of the inspection data.
 #
 # The crawler runs here rather than on Cloudflare because a full crawl is a
 # couple of thousand page fetches, which does not fit inside a Worker's
@@ -17,10 +17,12 @@ name: Refresh inspection data
 
 on:
   schedule:
-    # Nightly incremental — cheap, catches anything posted that day.
-    - cron: "20 8 * * *"
-    # Weekly full crawl — picks up corrections, closures and re-permits.
-    - cron: "50 9 * * 0"
+    # Weekly incremental. Nightly was ~40 new inspections on a good day across
+    # 9k places and often zero; the data does not move fast enough to be worth
+    # a run a day, and every run is load on a state health department's site.
+    - cron: "20 8 * * 2"
+    # Quarterly full crawl — corrections, closures and re-permits.
+    - cron: "50 9 1 1,4,7,10 *"
   workflow_dispatch:
     inputs:
       full:
@@ -38,7 +40,8 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # A statewide full crawl is ~13k page fetches at three workers.
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7
 
@@ -51,7 +54,7 @@ jobs:
       - name: Choose crawl mode
         id: mode
         run: |
-          if [ "${{ github.event.inputs.full }}" = "true" ] || [ "${{ github.event.schedule }}" = "50 9 * * 0" ]; then
+          if [ "${{ github.event.inputs.full }}" = "true" ] || [ "${{ github.event.schedule }}" = "50 9 1 1,4,7,10 *" ]; then
             echo "args=--full" >> "$GITHUB_OUTPUT"
           else
             echo "args=--since-days 45" >> "$GITHUB_OUTPUT"
@@ -70,7 +73,8 @@ jobs:
         run: |
           git config user.name "score-bot"
           git config user.email "score-bot@users.noreply.github.com"
-          git add data/ web/public/places.json web/public/version.json web/public/history/
+          git add data/ web/public/counties.json web/public/version.json \
+                  web/public/places/ web/public/history/
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
