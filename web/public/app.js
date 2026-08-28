@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "428ac5cb", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "de839e7d", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -2457,6 +2457,13 @@ function openSheet(id) {
  * place: five points below average is unremarkable where sd is 6 and unusual
  * where it is 3.
  */
+/* Labels are escaped where they are written, not where they are built.
+ *
+ * The county label was escaped and the chain label -- added later, two lines
+ * below it -- was not. Chain names come from establishment names scraped off a
+ * third-party site, which nothing here controls. Escaping once at the sink
+ * means the next comparison someone adds is safe by default rather than safe
+ * by remembering. */
 function contextHTML(p) {
   if (!p.latest || !state.manifest) return "";
   const score = p.latest.score;
@@ -2467,7 +2474,7 @@ function contextHTML(p) {
     const gap = score - county.m;
     const z = county.sd ? gap / county.sd : 0;
     bits.push({
-      label: `${escapeHTML(p.county)} County`,
+      label: `${p.county} County`,
       mean: county.m,
       n: county.n,
       gap,
@@ -2499,7 +2506,7 @@ function contextHTML(p) {
   return `<h3 class="sec-title">How this compares</h3>
     <div class="compare">${bits.map((b) => `
       <div class="cmp">
-        <span class="cmp-how">${b.how} <b>${b.label}</b></span>
+        <span class="cmp-how">${b.how} <b>${escapeHTML(b.label)}</b></span>
         <span class="cmp-bar">
           <span class="cmp-mean" style="left:${clampPct(b.mean)}%"></span>
           <span class="cmp-you" style="left:${clampPct(score)}%"></span>
@@ -3006,7 +3013,12 @@ navigator.serviceWorker?.addEventListener("message", (e) => {
 
 if ("serviceWorker" in navigator) {
   addEventListener("load", async () => {
-    const reg = await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+    // Registration can fail or be blocked -- private windows, enterprise
+    // policy, an insecure context -- and it resolves to undefined rather than
+    // rejecting. The app works fine without it; throwing here did not.
+    const reg = await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" })
+      .catch(() => null);
+    if (!reg) return;
     // Ask once, explicitly. The browser checks for a new worker on its own
     // schedule, and a host that puts a long browser TTL on the script can
     // stretch that out considerably -- which looks exactly like a deploy that

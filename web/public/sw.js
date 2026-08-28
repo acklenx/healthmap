@@ -19,7 +19,7 @@
  * few bytes, and caching it would defeat the entire scheme.
  */
 
-const SHELL_VERSION = "428ac5cb";
+const SHELL_VERSION = "de839e7d";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const HISTORY = "history-v1";
@@ -32,12 +32,12 @@ const TILE_LIMIT = 900;      // roughly a couple of towns' worth, at a few kB ea
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?cache-id=428ac5cb",
-  "/app.js?cache-id=428ac5cb",
+  "/styles.css?cache-id=de839e7d",
+  "/app.js?cache-id=de839e7d",
   // Loaded on demand when something is shared, precached for the same reason
   // Leaflet is: the moment you want it is not a good moment to need the network.
-  "/qr.js?cache-id=428ac5cb",
-  "/manifest.webmanifest?cache-id=428ac5cb",
+  "/qr.js?cache-id=de839e7d",
+  "/manifest.webmanifest?cache-id=de839e7d",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least
   // likely to have signal to spare.
@@ -162,7 +162,14 @@ self.addEventListener("fetch", (event) => {
   // The manifest and the county shards, all stamped with the generation they
   // belong to. Same reasoning as the history shards below: immutable for that
   // stamp, and the whole previous generation is dropped when a new one lands.
-  if (url.pathname === "/counties.json" || url.pathname.startsWith("/places/")) {
+  // chains.json, trend.json and changes.json are stamped with the payload's
+  // generation like everything else the crawler writes -- but they were
+  // falling through to the app-shell handler below, which matches with
+  // ignoreSearch and would happily serve last week's numbers against this
+  // week's stamp.
+  if (url.pathname === "/counties.json" || url.pathname.startsWith("/places/") ||
+      url.pathname === "/chains.json" || url.pathname === "/trend.json" ||
+      url.pathname === "/changes.json") {
     event.respondWith(immutable(request, DATA, { pruneStale: url.searchParams.get("v") }));
     return;
   }
