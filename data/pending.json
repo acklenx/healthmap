@@ -36,6 +36,42 @@
    "street": "7070 HWY. 15 S",
    "zip": "30678"
   },
+  "12275786": {
+   "city": "GOOD HOPE",
+   "county": "Walton",
+   "id": 12275786,
+   "inspections": [
+    {
+     "date": "2024-02-02",
+     "insp_id": 57390684,
+     "score": 100
+    },
+    {
+     "date": "2024-10-01",
+     "insp_id": 57429859,
+     "score": 99
+    },
+    {
+     "date": "2025-03-31",
+     "insp_id": 57458885,
+     "score": 100
+    },
+    {
+     "date": "2025-09-22",
+     "insp_id": 57487565,
+     "score": 100
+    },
+    {
+     "date": "2026-03-03",
+     "insp_id": 57516858,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Carver Middle School",
+   "street": "1065 GOOD HOPE RD",
+   "zip": "30641"
+  },
   "12276002": {
    "city": "ILA",
    "county": "Madison",
@@ -597,6 +633,42 @@
    "street": "4518 23 HWY B",
    "zip": "30425"
   },
+  "12986843": {
+   "city": "SASSER",
+   "county": "Terrell",
+   "id": 12986843,
+   "inspections": [
+    {
+     "date": "2024-05-13",
+     "insp_id": 57406597,
+     "score": 97
+    },
+    {
+     "date": "2024-11-20",
+     "insp_id": 57437688,
+     "score": 92
+    },
+    {
+     "date": "2025-05-12",
+     "insp_id": 57466007,
+     "score": 96
+    },
+    {
+     "date": "2025-11-19",
+     "insp_id": 57498207,
+     "score": 97
+    },
+    {
+     "date": "2026-05-27",
+     "insp_id": 57531993,
+     "score": 96
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Sasser Premier Outdoors, Inc",
+   "street": "125 US HWY 82",
+   "zip": "39885"
+  },
   "12988296": {
    "city": "ALLENHURST",
    "county": "Long",
@@ -705,6 +777,84 @@
    "street": "3714 THOMASVILLE RD",
    "zip": "39834"
   },
+  "12992072": {
+   "city": "TALBOTTON",
+   "county": "Talbot",
+   "id": 12992072,
+   "inspections": [
+    {
+     "date": "2024-03-20",
+     "insp_id": 57400734,
+     "score": 100
+    },
+    {
+     "date": "2024-06-28",
+     "insp_id": 57413920,
+     "score": 100
+    },
+    {
+     "date": "2025-04-07",
+     "insp_id": 57460376,
+     "score": 100
+    },
+    {
+     "date": "2026-05-04",
+     "insp_id": 57528126,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Dudley's Big Chic of Talbotton, LLC",
+   "street": "148 N WASHINGTON AVE",
+   "zip": "31827"
+  },
+  "12993706": {
+   "city": "BROOKS",
+   "county": "Troup",
+   "id": 12993706,
+   "inspections": [
+    {
+     "date": "2024-01-24",
+     "insp_id": 57433281,
+     "score": 100
+    },
+    {
+     "date": "2025-03-05",
+     "insp_id": 57453645,
+     "score": 100
+    },
+    {
+     "date": "2026-02-04",
+     "insp_id": 57516048,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Sorrir, LLC",
+   "street": "90 GLENDA DR UNIT F",
+   "zip": "30205"
+  },
+  "12994485": {
+   "city": "TALBOTTON",
+   "county": "Talbot",
+   "id": 12994485,
+   "inspections": [
+    {
+     "date": "2024-08-16",
+     "insp_id": 57421747,
+     "score": 100
+    },
+    {
+     "date": "2026-06-23",
+     "insp_id": 57537664,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "85 BBQ (Base of Operation)",
+   "street": "153 N WASHINGTON AVE",
+   "zip": "31827"
+  },
   "12995611": {
    "city": "BYROMVILLE",
    "county": "Dooly",
@@ -730,6 +880,69 @@
    "name": "4Angels of Byromville Healthcare Center",
    "street": "712 PATTERSON ST",
    "zip": "31007"
+  },
+  "12998453": {
+   "city": "TALBOTTON",
+   "county": "Talbot",
+   "id": 12998453,
+   "inspections": [
+    {
+     "date": "2024-08-16",
+     "insp_id": 57421752,
+     "score": 100
+    },
+    {
+     "date": "2026-06-26",
+     "insp_id": 57537649,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "85 BBQ (Mobile Unit)",
+   "street": "153 N WASHINGTON AVE",
+   "zip": "31827"
+  },
+  "13000023": {
+   "city": "YATESVILLE",
+   "county": "Upson",
+   "id": 13000023,
+   "inspections": [
+    {
+     "date": "2025-04-02",
+     "insp_id": 57459462,
+     "score": 100
+    },
+    {
+     "date": "2026-05-26",
+     "insp_id": 57531685,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Pro Bar / Base of Operation",
+   "street": "303 ABERCROMBIE RD",
+   "zip": "31097"
+  },
+  "13000233": {
+   "city": "VARNELL",
+   "county": "Whitfield",
+   "id": 13000233,
+   "inspections": [
+    {
+     "date": "2024-10-22",
+     "insp_id": 57433023,
+     "score": 98
+    },
+    {
+     "date": "2026-01-07",
+     "insp_id": 57506223,
+     "score": 93
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Burger Den",
+   "street": "160 HWY 2",
+   "zip": "30756"
   },
   "13000334": {
    "city": "CHESTER",
@@ -788,6 +1001,48 @@
    "street": "949 85 CONNECTOR HWY",
    "zip": "30205"
   },
+  "13003585": {
+   "city": "YATESVILLE",
+   "county": "Upson",
+   "id": 13003585,
+   "inspections": [
+    {
+     "date": "2025-04-02",
+     "insp_id": 57459468,
+     "score": 100
+    },
+    {
+     "date": "2026-05-14",
+     "insp_id": 57530184,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Pro Bar / Mobile Unit",
+   "street": "303 ABERCROMBIE RD",
+   "zip": "31097"
+  },
+  "13004665": {
+   "city": "TALBOTTON",
+   "county": "Talbot",
+   "id": 13004665,
+   "inspections": [
+    {
+     "date": "2025-06-24",
+     "insp_id": 57472940,
+     "score": 100
+    },
+    {
+     "date": "2026-06-29",
+     "insp_id": 57538231,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Monroes's Dugout",
+   "street": "35 TYLER ST",
+   "zip": "31827"
+  },
   "13007997": {
    "city": "DOUGLAS",
    "county": "Coffee",
@@ -830,26 +1085,31 @@
    "street": "3300 MARJAN DR STE 16",
    "zip": "30045"
   },
-  "13010050": {
-   "city": "HORTENSE",
-   "county": "Brantley",
-   "id": 13010050,
+  "13010381": {
+   "city": "SASSER",
+   "county": "Terrell",
+   "id": 13010381,
    "inspections": [
     {
-     "date": "2025-12-08",
-     "insp_id": 57501101,
+     "date": "2025-12-31",
+     "insp_id": 57504978,
      "score": 100
     },
     {
-     "date": "2026-06-22",
-     "insp_id": 57536744,
+     "date": "2026-02-25",
+     "insp_id": 57514937,
      "score": 100
+    },
+    {
+     "date": "2026-08-13",
+     "insp_id": 57546697,
+     "score": 92
     }
    ],
    "kind": "Food Service Inspections",
-   "name": "Copper Magnolia",
-   "street": "7154 SR-110 W",
-   "zip": "31543"
+   "name": "Mr. A's",
+   "street": "101 HWY 82",
+   "zip": "39885"
   },
   "13011944": {
    "city": "IRWINVILLE",
@@ -940,6 +1200,22 @@
    "name": "FARGO COUNTRYSIDE KITCHEN",
    "street": "754 US HWY 441",
    "zip": "31631"
+  },
+  "13014011": {
+   "city": "COBB",
+   "county": "Sumter",
+   "id": 13014011,
+   "inspections": [
+    {
+     "date": "2026-05-22",
+     "insp_id": 57548837,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Ricks & Sandy's Eats LLC",
+   "street": "4262 HWY 280 EAST",
+   "zip": "31735"
   },
   "13016136": {
    "city": "JENKINSBURG",
@@ -1462,36 +1738,113 @@
    "street": "2971 OLD BETHEL RD",
    "zip": "31012"
   },
-  "3150231": {
-   "city": "TUNNEL HILL",
-   "county": "Catoosa",
-   "id": 3150231,
+  "3137053": {
+   "city": "CHULA",
+   "county": "Tift",
+   "id": 3137053,
    "inspections": [
     {
-     "date": "2024-07-01",
-     "insp_id": 57413796,
+     "date": "2024-04-30",
+     "insp_id": 57404593,
      "score": 100
     },
     {
-     "date": "2024-07-22",
-     "insp_id": 57416674,
+     "date": "2024-12-02",
+     "insp_id": 57438773,
      "score": 100
     },
     {
-     "date": "2025-07-09",
-     "insp_id": 57475223,
+     "date": "2025-04-29",
+     "insp_id": 57463769,
      "score": 100
     },
     {
-     "date": "2026-07-09",
-     "insp_id": 57539495,
+     "date": "2025-10-21",
+     "insp_id": 57492688,
+     "score": 100
+    },
+    {
+     "date": "2026-04-27",
+     "insp_id": 57526672,
      "score": 100
     }
    ],
    "kind": "Food Service Inspections",
-   "name": "DOGWOOD BIBLE CAMP CAFETERIA - Seasonal",
-   "street": "5296 DOGWOOD VALLEY RD",
-   "zip": "30755"
+   "name": "Tiftarea Academy Dining Hall",
+   "street": "3144 U. S. HIGHWAY 41 N",
+   "zip": "31733"
+  },
+  "3141481": {
+   "city": "TOCCOA FALLS",
+   "county": "Stephens",
+   "id": 3141481,
+   "inspections": [
+    {
+     "date": "2018-08-30",
+     "insp_id": 52085172,
+     "score": 99
+    },
+    {
+     "date": "2019-09-30",
+     "insp_id": 56537056,
+     "score": 99
+    },
+    {
+     "date": "2023-03-07",
+     "insp_id": 57341449,
+     "score": 100
+    },
+    {
+     "date": "2024-09-04",
+     "insp_id": 57425422,
+     "score": 100
+    },
+    {
+     "date": "2025-10-30",
+     "insp_id": 57495272,
+     "score": 91
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Screaming Eagle Cafe",
+   "street": "107 KINCAID DR",
+   "zip": "30598"
+  },
+  "3141492": {
+   "city": "TOCCOA FALLS",
+   "county": "Stephens",
+   "id": 3141492,
+   "inspections": [
+    {
+     "date": "2018-11-01",
+     "insp_id": 55733756,
+     "score": 96
+    },
+    {
+     "date": "2019-09-30",
+     "insp_id": 56537053,
+     "score": 86
+    },
+    {
+     "date": "2023-03-07",
+     "insp_id": 57341455,
+     "score": 94
+    },
+    {
+     "date": "2024-08-21",
+     "insp_id": 57422558,
+     "score": 100
+    },
+    {
+     "date": "2025-10-30",
+     "insp_id": 57495278,
+     "score": 95
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "TOCCOA FALLS CAFETERIA",
+   "street": "107 KINCAID DR",
+   "zip": "30598"
   },
   "3866": {
    "city": "CLIMAX",
@@ -1564,6 +1917,114 @@
    "name": "MACON COUNTY HEAD START",
    "street": "409 S STREET ST",
    "zip": "31007"
+  },
+  "48315": {
+   "city": "WARESBORO",
+   "county": "Ware",
+   "id": 48315,
+   "inspections": [
+    {
+     "date": "2025-05-07",
+     "insp_id": 57466643,
+     "score": 99
+    },
+    {
+     "date": "2025-08-28",
+     "insp_id": 57483941,
+     "score": 100
+    },
+    {
+     "date": "2025-12-16",
+     "insp_id": 57503424,
+     "score": 99
+    },
+    {
+     "date": "2026-04-23",
+     "insp_id": 57526293,
+     "score": 96
+    },
+    {
+     "date": "2026-08-18",
+     "insp_id": 57547503,
+     "score": 98
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Waresboro Elementary School",
+   "street": "3379 W CHURCH ST",
+   "zip": "31564"
+  },
+  "48607": {
+   "city": "TALBOTTON",
+   "county": "Talbot",
+   "id": 48607,
+   "inspections": [
+    {
+     "date": "2023-12-13",
+     "insp_id": 57388104,
+     "score": 100
+    },
+    {
+     "date": "2024-11-19",
+     "insp_id": 57437458,
+     "score": 100
+    },
+    {
+     "date": "2025-06-25",
+     "insp_id": 57474389,
+     "score": 100
+    },
+    {
+     "date": "2025-12-10",
+     "insp_id": 57501796,
+     "score": 100
+    },
+    {
+     "date": "2026-06-11",
+     "insp_id": 57535081,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Central Elementary and High School",
+   "street": "HWY. 41 NORTH",
+   "zip": "31827"
+  },
+  "48614": {
+   "city": "TALBOTTON",
+   "county": "Talbot",
+   "id": 48614,
+   "inspections": [
+    {
+     "date": "2022-01-14",
+     "insp_id": 57286574,
+     "score": 100
+    },
+    {
+     "date": "2023-02-16",
+     "insp_id": 57338365,
+     "score": 100
+    },
+    {
+     "date": "2023-08-21",
+     "insp_id": 57364082,
+     "score": 100
+    },
+    {
+     "date": "2024-09-19",
+     "insp_id": 57428540,
+     "score": 96
+    },
+    {
+     "date": "2026-05-04",
+     "insp_id": 57528128,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Talbot County Senior Center",
+   "street": "1127 HWY. 41 NORTH",
+   "zip": "31827"
   },
   "4988": {
    "city": "STILLMORE",
@@ -1725,6 +2186,114 @@
    "street": "COCHRAN, GA 31014",
    "zip": ""
   },
+  "7456": {
+   "city": "FORT GORDON",
+   "county": "Richmond",
+   "id": 7456,
+   "inspections": [
+    {
+     "date": "2024-05-17",
+     "insp_id": 57407380,
+     "score": 99
+    },
+    {
+     "date": "2024-11-06",
+     "insp_id": 57435539,
+     "score": 97
+    },
+    {
+     "date": "2025-05-21",
+     "insp_id": 57468310,
+     "score": 100
+    },
+    {
+     "date": "2025-12-15",
+     "insp_id": 57503045,
+     "score": 100
+    },
+    {
+     "date": "2026-05-13",
+     "insp_id": 57529880,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "FREEDOM PARK ELEMENTARY SCHOOL",
+   "street": "345 42ND ST BLDG 43400",
+   "zip": "30905"
+  },
+  "7823": {
+   "city": "AUGUSTA",
+   "county": "Richmond",
+   "id": 7823,
+   "inspections": [
+    {
+     "date": "2022-12-06",
+     "insp_id": 57328100,
+     "score": 100
+    },
+    {
+     "date": "2023-06-23",
+     "insp_id": 57355891,
+     "score": 100
+    },
+    {
+     "date": "2024-01-30",
+     "insp_id": 57390182,
+     "score": 99
+    },
+    {
+     "date": "2024-07-24",
+     "insp_id": 57417504,
+     "score": 91
+    },
+    {
+     "date": "2026-05-21",
+     "insp_id": 57531420,
+     "score": 95
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "UNIVERSITY FOOD COURT",
+   "street": "1350 WALTON WAY",
+   "zip": "30910"
+  },
+  "7892": {
+   "city": "AUGUSTA",
+   "county": "Richmond",
+   "id": 7892,
+   "inspections": [
+    {
+     "date": "2024-05-20",
+     "insp_id": 57407607,
+     "score": 96
+    },
+    {
+     "date": "2024-11-06",
+     "insp_id": 57435545,
+     "score": 99
+    },
+    {
+     "date": "2025-05-21",
+     "insp_id": 57471619,
+     "score": 100
+    },
+    {
+     "date": "2025-12-15",
+     "insp_id": 57503043,
+     "score": 95
+    },
+    {
+     "date": "2026-05-13",
+     "insp_id": 57529887,
+     "score": 93
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "YOUTH CHALLENGE ACADEMY",
+   "street": "245 CLUB DR",
+   "zip": "30905"
+  },
   "7960884": {
    "city": "MARIETTA",
    "county": "Cobb",
@@ -1868,6 +2437,78 @@
    "name": "The Peking Restaurant",
    "street": "3461 ROOSEVELT HWY",
    "zip": "30272"
+  },
+  "9485364": {
+   "city": "TOCCOA FALLS",
+   "county": "Stephens",
+   "id": 9485364,
+   "inspections": [
+    {
+     "date": "2018-10-25",
+     "insp_id": 55732724,
+     "score": 99
+    },
+    {
+     "date": "2019-10-25",
+     "insp_id": 56545169,
+     "score": 99
+    },
+    {
+     "date": "2022-09-20",
+     "insp_id": 57317116,
+     "score": 95
+    },
+    {
+     "date": "2024-08-21",
+     "insp_id": 57422512,
+     "score": 100
+    },
+    {
+     "date": "2025-10-30",
+     "insp_id": 57494837,
+     "score": 96
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Toccoa Falls College Odyssey Coffehouse",
+   "street": "107 KINCAID DR. (MSC 779)",
+   "zip": "30598"
+  },
+  "9485439": {
+   "city": "VARNELL",
+   "county": "Whitfield",
+   "id": 9485439,
+   "inspections": [
+    {
+     "date": "2021-02-24",
+     "insp_id": 57248999,
+     "score": 94
+    },
+    {
+     "date": "2022-06-16",
+     "insp_id": 57305495,
+     "score": 88
+    },
+    {
+     "date": "2024-03-04",
+     "insp_id": 57395822,
+     "score": 93
+    },
+    {
+     "date": "2025-06-16",
+     "insp_id": 57471648,
+     "score": 98
+    },
+    {
+     "date": "2026-08-10",
+     "insp_id": 57546075,
+     "score": 88
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "McDonald's #31208",
+   "street": "3898 CLEVELAND HWY",
+   "zip": "30756"
   },
   "9486404": {
    "city": "HARALSON",
