@@ -12,6 +12,17 @@
 # worker is what actually makes this app work offline. The HTTP cache was never
 # doing that job; on sw.js it was actively delaying releases.
 
+# Turn off browser APIs this app has no use for.
+#
+# Shared Storage and Protected Audience are ad-tech surfaces -- and the only
+# thing here that touches them is Cloudflare's injected bot-detection script,
+# which trips Chrome's deprecation warnings doing so and caps the Lighthouse
+# best-practices score. Disabling the features by policy is honest either way:
+# a health-inspection lookup has no business running ad auctions.
+# Geolocation is deliberately not listed -- the app asks for it properly.
+/*
+  Permissions-Policy: join-ad-interest-group=(), run-ad-auction=(), browsing-topics=(), shared-storage=(), shared-storage-select-url=(), attribution-reporting=()
+
 /sw.js
   Cache-Control: no-cache
 
