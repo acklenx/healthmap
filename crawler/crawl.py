@@ -275,7 +275,16 @@ def merge(store, fresh):
     return changes
 
 
-def build_payload(store):
+def chain_index(store, min_locations=8):
+    """Chain key -> how many locations, for keys big enough to publish."""
+    counts = {}
+    for est in store.values():
+        if "lat" in est and est["inspections"]:
+            counts[chain_key(est["name"])] = counts.get(chain_key(est["name"]), 0) + 1
+    return {k: n for k, n in counts.items() if n >= min_locations}
+
+
+def build_payload(store, chains=None):
     """Compact structure for the client. Short keys: this ships over cell data.
 
     Grades are omitted -- they're a pure function of the score, so the client
@@ -314,6 +323,12 @@ def build_payload(store):
                 # Risk-factor count on the latest inspection, when known, so
                 # the list can be filtered by it without loading any history.
                 "rf": latest.get("rf"),
+                # The brand, when it is one with enough locations to compare
+                # against. Tagged here rather than derived in the app: the
+                # normalisation should have one implementation, not two that
+                # can quietly disagree.
+                **({"ck": chain_key(est["name"])}
+                   if chains and chain_key(est["name"]) in chains else {}),
                 "hn": len(history),
             }
         )
@@ -612,7 +627,8 @@ def main():
         geocode.resolve(list(store.values()), cache, log=log)
         cache.save()
 
-    places = build_payload(store)
+    chains_index = chain_index(store)
+    places = build_payload(store, chains_index)
     generated = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     # Anything the payload cannot carry -- no coordinates yet, or no

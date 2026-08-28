@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "4b40c04d", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "428ac5cb", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -398,6 +398,7 @@ async function ingestCounty(county, stamp) {
       historyCount: p.hn,
       previous: p.pv ?? null,
       risk: p.rf ?? null,
+      chain: p.ck || null,
       // Precomputed once so filtering/searching stays cheap across ~13k rows.
       search: `${p.n} ${p.a} ${p.c}`.toLowerCase(),
       latest: p.l ? { date: p.l[0], score: p.l[1], inspId: p.l[2] } : null,
@@ -1468,6 +1469,7 @@ function statsHTML(rows) {
  * a chain table assembled client-side would compare a brand against itself in
  * one metro and label the result Georgia. */
 let extras = null;
+let chainIndex = null;   // chain key -> its statewide row
 
 async function loadExtras() {
   if (extras) return extras;
@@ -1477,6 +1479,7 @@ async function loadExtras() {
     fetch(`/trend.json?v=${stamp}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
   ]);
   extras = { chains: chains?.chains || [], trend };
+  chainIndex = new Map(extras.chains.map((c) => [c.n, c]));
   return extras;
 }
 
@@ -2434,6 +2437,13 @@ function openSheet(id) {
   syncPins();      // ring the pin behind the sheet, so closing it lands in place
 
   if (!p.history) fetchSheetHistory(p);
+  // The brand comparison needs chains.json, which is otherwise only loaded for
+  // the stats sheet. Fetch it once, then redraw the sheet that asked for it.
+  if (p.chain && !chainIndex) {
+    loadExtras().then(() => {
+      if (state.open?.id === p.id) renderSheetBody(p);
+    }).catch(() => {});
+  }
 }
 
 /* What a score means, against something.
@@ -2467,6 +2477,24 @@ function contextHTML(p) {
     });
   }
 
+  // Against the brand, which is arguably a better control than geography:
+  // same menu, same procedures, same training, different building.
+  const chain = p.chain && chainIndex?.get(p.chain);
+  if (chain) {
+    const gap = score - chain.m;
+    const z = chain.sd ? gap / chain.sd : 0;
+    bits.push({
+      label: titleCase(chain.n),
+      mean: chain.m,
+      n: chain.c,
+      gap,
+      unit: "Georgia locations",
+      how: Math.abs(z) < 0.5 ? "about average for"
+        : Math.abs(z) < 1.5 ? (gap > 0 ? "above average for" : "below average for")
+        : (gap > 0 ? "well above average for" : "well below average for"),
+    });
+  }
+
   if (!bits.length) return "";
   return `<h3 class="sec-title">How this compares</h3>
     <div class="compare">${bits.map((b) => `
@@ -2477,7 +2505,8 @@ function contextHTML(p) {
           <span class="cmp-you" style="left:${clampPct(score)}%"></span>
         </span>
         <span class="cmp-note">${score} here · ${b.mean} average across
-          ${b.n.toLocaleString()} places${b.gap ? ` · ${b.gap > 0 ? "+" : ""}${b.gap.toFixed(1)}` : ""}</span>
+          ${b.n.toLocaleString()} ${b.unit || "places"}${
+          b.gap ? ` · ${b.gap > 0 ? "+" : ""}${b.gap.toFixed(1)}` : ""}</span>
       </div>`).join("")}</div>`;
 }
 

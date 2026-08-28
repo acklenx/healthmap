@@ -524,6 +524,23 @@ fills in over a few weeks; after that only new inspections cost anything. The
 filter says how much is known so far, because an empty result must not be
 mistaken for a clean bill of health.
 
+**A score against something.** A number on its own is what this app argues
+against, and the detail sheet printed one. It now sits on a track beside two
+reference classes: the county it was given in, and — where the place belongs to
+a brand with at least eight Georgia locations — that brand. Same menu, same
+procedures, same training, different building, which is arguably a better
+control than geography.
+
+The wording is driven by standard deviations rather than raw gaps, because
+spread varies: five points below average is unremarkable where sd is 6 and
+unusual where it is 3.
+
+The comparison that is *not* here is the one worth wanting. Grouping a score
+against others by the same inspector would control for severity directly, and
+Georgia DPH does not publish it — the `Inspector (Signature)` field on the full
+report is empty on every report checked, across four counties. It would take an
+open records request, and it would arrive as a spreadsheet rather than a feed.
+
 **Push alerts** are written and tested and switched off: `scripts/enable_alerts.sh`
 does the provisioning in one command. Until then, Save only filters.
 
