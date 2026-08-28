@@ -655,6 +655,32 @@ main { padding: 0 14px; }
 .menu-row small { display: block; margin-top: 1px; color: var(--ink-muted); font-size: 12.5px; }
 .menu-go { flex: 0 0 auto; width: 16px; height: 16px; color: var(--ink-muted); stroke-width: 2; }
 
+/* One score against its reference class. A dot on a track rather than a number
+   beside a number: the question is "where does this sit", not "what is the
+   difference", and a track answers that without arithmetic. */
+.compare { display: grid; gap: 14px; }
+.cmp-how { display: block; font-size: 13.5px; color: var(--ink-2); }
+.cmp-how b { color: var(--ink); font-weight: 650; }
+.cmp-bar {
+  position: relative;
+  display: block;
+  height: 8px;
+  margin: 7px 0 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--grade-u) 45%, transparent) 0%,
+    color-mix(in srgb, var(--grade-c) 45%, transparent) 25%,
+    color-mix(in srgb, var(--grade-b) 45%, transparent) 50%,
+    color-mix(in srgb, var(--grade-a) 45%, transparent) 100%);
+}
+.cmp-mean, .cmp-you { position: absolute; top: 50%; border-radius: 50%; transform: translate(-50%, -50%); }
+.cmp-mean { width: 10px; height: 10px; background: var(--surface);
+            box-shadow: 0 0 0 2px var(--ink-muted); }
+.cmp-you  { width: 14px; height: 14px; background: var(--ink);
+            box-shadow: 0 0 0 2.5px var(--surface); }
+.cmp-note { display: block; color: var(--ink-muted); font-size: 12px;
+            font-variant-numeric: tabular-nums; }
+
 .sheet-hint { margin: 12px 0 0; color: var(--ink-muted); font-size: 12.5px; line-height: 1.5; }
 .sheet-hint b { color: var(--ink-2); font-weight: 600; }
 .sheet-compact .sec-title:first-child { margin-top: 0; }

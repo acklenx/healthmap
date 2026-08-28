@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "1f31ccbb", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "4b40c04d", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -2436,9 +2436,60 @@ function openSheet(id) {
   if (!p.history) fetchSheetHistory(p);
 }
 
+/* What a score means, against something.
+ *
+ * A number on its own is the thing this app argues against, and then the sheet
+ * printed one. 82 is a different fact in a county averaging 92 than in one
+ * averaging 96, and the comparison is free -- the manifest already carries
+ * every county's mean and spread.
+ *
+ * Standard deviations rather than raw gaps, because the spread differs by
+ * place: five points below average is unremarkable where sd is 6 and unusual
+ * where it is 3.
+ */
+function contextHTML(p) {
+  if (!p.latest || !state.manifest) return "";
+  const score = p.latest.score;
+  const county = state.manifest.counties.find((c) => c.c === p.county);
+  const bits = [];
+
+  if (county?.m != null && county.n >= 30) {
+    const gap = score - county.m;
+    const z = county.sd ? gap / county.sd : 0;
+    bits.push({
+      label: `${escapeHTML(p.county)} County`,
+      mean: county.m,
+      n: county.n,
+      gap,
+      how: Math.abs(z) < 0.5 ? "about average for"
+        : Math.abs(z) < 1.5 ? (gap > 0 ? "above average for" : "below average for")
+        : (gap > 0 ? "well above average for" : "well below average for"),
+    });
+  }
+
+  if (!bits.length) return "";
+  return `<h3 class="sec-title">How this compares</h3>
+    <div class="compare">${bits.map((b) => `
+      <div class="cmp">
+        <span class="cmp-how">${b.how} <b>${b.label}</b></span>
+        <span class="cmp-bar">
+          <span class="cmp-mean" style="left:${clampPct(b.mean)}%"></span>
+          <span class="cmp-you" style="left:${clampPct(score)}%"></span>
+        </span>
+        <span class="cmp-note">${score} here · ${b.mean} average across
+          ${b.n.toLocaleString()} places${b.gap ? ` · ${b.gap > 0 ? "+" : ""}${b.gap.toFixed(1)}` : ""}</span>
+      </div>`).join("")}</div>`;
+}
+
+/** Scores below 70 are rare enough that a 0-100 axis wastes most of its width. */
+function clampPct(score) {
+  const lo = 60;
+  return Math.max(0, Math.min(100, ((score - lo) / (100 - lo)) * 100));
+}
+
 /** The sheet's scrolling half. Called again once history arrives. */
 function renderSheetBody(p) {
-  el.sheetBody.innerHTML = historySectionHTML(p) + alertsHTML();
+  el.sheetBody.innerHTML = contextHTML(p) + historySectionHTML(p) + alertsHTML();
   // The most recent visit is what people came for — open it immediately.
   if (p.history?.[0]) toggleDetail(p.history[0].inspId, true);
 }

@@ -345,6 +345,12 @@ def build_shards(places):
             "c": county,
             "s": slug(county),
             "n": len(rows),
+            # Mean and spread of the county's latest scores, so a single score
+            # can be read against the place it was given. A score with no
+            # reference class is the thing this whole app argues against.
+            "m": round(sum(r["l"][1] for r in rows) / len(rows), 1),
+            "sd": round((sum((r["l"][1] - (sum(x["l"][1] for x in rows) / len(rows))) ** 2
+                             for r in rows) / len(rows)) ** 0.5, 1),
             # Inspections and ZIPs are here so the coverage page can report on a
             # county without downloading it. They cost a few bytes each.
             "i": sum(r["hn"] for r in rows),
