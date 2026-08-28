@@ -1,20 +1,385 @@
 {
  "places": {
-  "1283045": {
-   "city": "",
-   "county": "Fulton",
-   "id": 1283045,
+  "12275073": {
+   "city": "WHITE PLAINS",
+   "county": "Greene",
+   "id": 12275073,
    "inspections": [
     {
-     "date": "2011-04-06",
-     "insp_id": 1517304,
-     "score": 99
+     "date": "2021-03-19",
+     "insp_id": 57251705,
+     "score": 98
+    },
+    {
+     "date": "2022-09-16",
+     "insp_id": 57317820,
+     "score": 98
+    },
+    {
+     "date": "2024-05-10",
+     "insp_id": 57406616,
+     "score": 95
+    },
+    {
+     "date": "2025-01-31",
+     "insp_id": 57448993,
+     "score": 94
+    },
+    {
+     "date": "2025-10-17",
+     "insp_id": 57493905,
+     "score": 95
     }
    ],
    "kind": "Food Service Inspections",
-   "name": "TEST RESTAURANT",
-   "street": "123 PEACHTREE ST ATLANTA, GA 30303",
-   "zip": ""
+   "name": "Holcomb's Bar-B-Que",
+   "street": "7070 HWY. 15 S",
+   "zip": "30678"
+  },
+  "12292805": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12292805,
+   "inspections": [
+    {
+     "date": "2022-06-14",
+     "insp_id": 57305103,
+     "score": 100
+    },
+    {
+     "date": "2023-03-02",
+     "insp_id": 57340244,
+     "score": 100
+    },
+    {
+     "date": "2024-06-12",
+     "insp_id": 57411580,
+     "score": 97
+    },
+    {
+     "date": "2025-04-10",
+     "insp_id": 57461012,
+     "score": 97
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519807,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "BIG ROCK CAFE",
+   "street": "STONE MOUNTAIN PARK",
+   "zip": "30086"
+  },
+  "12292807": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12292807,
+   "inspections": [
+    {
+     "date": "2018-06-21",
+     "insp_id": 57192162,
+     "score": 91
+    },
+    {
+     "date": "2022-12-12",
+     "insp_id": 57328422,
+     "score": 99
+    },
+    {
+     "date": "2023-06-01",
+     "insp_id": 57352983,
+     "score": 100
+    },
+    {
+     "date": "2024-08-27",
+     "insp_id": 57423412,
+     "score": 96
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519736,
+     "score": 96
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "COMMISSARY",
+   "street": "STONE MOUNTAIN PARK",
+   "zip": "30086"
+  },
+  "12292808": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12292808,
+   "inspections": [
+    {
+     "date": "2022-06-10",
+     "insp_id": 57304675,
+     "score": 91
+    },
+    {
+     "date": "2023-06-01",
+     "insp_id": 57353005,
+     "score": 100
+    },
+    {
+     "date": "2024-08-09",
+     "insp_id": 57420619,
+     "score": 100
+    },
+    {
+     "date": "2025-02-28",
+     "insp_id": 57452806,
+     "score": 99
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519810,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "TOP OF THE MOUNTAIN CONCESSION",
+   "street": "STONE MOUNTAIN PARK",
+   "zip": "30086"
+  },
+  "12293484": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12293484,
+   "inspections": [
+    {
+     "date": "2018-06-05",
+     "insp_id": 57192153,
+     "score": 98
+    },
+    {
+     "date": "2022-06-14",
+     "insp_id": 57305117,
+     "score": 99
+    },
+    {
+     "date": "2023-03-02",
+     "insp_id": 57340258,
+     "score": 100
+    },
+    {
+     "date": "2024-08-09",
+     "insp_id": 57420627,
+     "score": 100
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519813,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "GRANITE CAFE",
+   "street": "HIGHWAY 78 E",
+   "zip": "30086"
+  },
+  "12293698": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12293698,
+   "inspections": [
+    {
+     "date": "2015-04-03",
+     "insp_id": 57178554,
+     "score": 90
+    },
+    {
+     "date": "2017-07-22",
+     "insp_id": 57190139,
+     "score": 93
+    },
+    {
+     "date": "2022-12-12",
+     "insp_id": 57328409,
+     "score": 100
+    },
+    {
+     "date": "2024-06-21",
+     "insp_id": 57412156,
+     "score": 100
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519798,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "CAMPFIRE SMOKEHOUSE GRILL",
+   "street": "STONE MOUNTAIN PARK",
+   "zip": "30086"
+  },
+  "12297452": {
+   "city": "PO BOX 778 STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12297452,
+   "inspections": [
+    {
+     "date": "2019-03-22",
+     "insp_id": 57192187,
+     "score": 100
+    },
+    {
+     "date": "2022-06-16",
+     "insp_id": 57305405,
+     "score": 99
+    },
+    {
+     "date": "2023-06-01",
+     "insp_id": 57353020,
+     "score": 100
+    },
+    {
+     "date": "2024-06-21",
+     "insp_id": 57412174,
+     "score": 97
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519801,
+     "score": 97
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "BASE CAMP BBQ (CROSSROADS)",
+   "street": "HIGHWAY 78 E",
+   "zip": "30086"
+  },
+  "12297672": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12297672,
+   "inspections": [
+    {
+     "date": "2022-06-16",
+     "insp_id": 57305416,
+     "score": 100
+    },
+    {
+     "date": "2023-06-01",
+     "insp_id": 57353017,
+     "score": 100
+    },
+    {
+     "date": "2024-06-12",
+     "insp_id": 57411500,
+     "score": 100
+    },
+    {
+     "date": "2025-04-10",
+     "insp_id": 57461034,
+     "score": 99
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519804,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "HYDRATE ( STONE MOUNTAIN PARK)",
+   "street": "PO BOX 778",
+   "zip": "30086"
+  },
+  "12298002": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12298002,
+   "inspections": [
+    {
+     "date": "2017-07-15",
+     "insp_id": 57186233,
+     "score": 100
+    },
+    {
+     "date": "2019-06-22",
+     "insp_id": 57193829,
+     "score": 98
+    },
+    {
+     "date": "2022-12-12",
+     "insp_id": 57328504,
+     "score": 100
+    },
+    {
+     "date": "2024-08-09",
+     "insp_id": 57420613,
+     "score": 100
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519812,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "LASER LAWN CONCESSIONS CART PAD # 3",
+   "street": "HIGHWAY 78 E",
+   "zip": "30086"
+  },
+  "12301206": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12301206,
+   "inspections": [
+    {
+     "date": "2020-02-22",
+     "insp_id": 57197259,
+     "score": 100
+    },
+    {
+     "date": "2023-01-31",
+     "insp_id": 57335045,
+     "score": 100
+    },
+    {
+     "date": "2024-06-12",
+     "insp_id": 57411567,
+     "score": 100
+    },
+    {
+     "date": "2025-04-10",
+     "insp_id": 57461021,
+     "score": 99
+    },
+    {
+     "date": "2026-03-19",
+     "insp_id": 57519805,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "COMPASS POINT CAFE",
+   "street": "HIGHWAY 78 E",
+   "zip": "30086"
+  },
+  "12302754": {
+   "city": "STONE MOUNTAIN",
+   "county": "DeKalb",
+   "id": 12302754,
+   "inspections": [
+    {
+     "date": "2023-01-20",
+     "insp_id": 57333525,
+     "score": 100
+    },
+    {
+     "date": "2024-08-27",
+     "insp_id": 57423404,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "KRAZY TATER",
+   "street": "HIGHWAY 78 E",
+   "zip": "30086"
   },
   "12978480": {
    "city": "CECIL",
@@ -124,41 +489,124 @@
    "street": "790 PATTEN AVE",
    "zip": "31645"
   },
-  "12991166": {
-   "city": "ATLANTA",
-   "county": "Fulton",
-   "id": 12991166,
+  "12991316": {
+   "city": "CLIMAX",
+   "county": "Decatur",
+   "id": 12991316,
    "inspections": [
     {
-     "date": "2024-04-24",
-     "insp_id": 57403950,
-     "score": 71
+     "date": "2023-10-10",
+     "insp_id": 57372499,
+     "score": 100
     },
     {
-     "date": "2024-05-07",
-     "insp_id": 57405795,
-     "score": 72
+     "date": "2023-12-19",
+     "insp_id": 57384429,
+     "score": 91
     },
     {
-     "date": "2025-04-15",
-     "insp_id": 57461782,
-     "score": 85
+     "date": "2024-07-08",
+     "insp_id": 57414700,
+     "score": 90
     },
     {
-     "date": "2025-11-18",
-     "insp_id": 57498067,
-     "score": 95
+     "date": "2024-12-11",
+     "insp_id": 57441838,
+     "score": 94
     },
     {
-     "date": "2026-05-05",
-     "insp_id": 57528335,
-     "score": 96
+     "date": "2026-04-28",
+     "insp_id": 57526919,
+     "score": 99
     }
    ],
    "kind": "Food Service Inspections",
-   "name": "Get Fruity Cafe",
-   "street": "6740 SHANNON PKWY",
-   "zip": "30329"
+   "name": "DWALLA'S LLC dba: DWALLA'S SIMPLY SOUTHERN RESTAURANT & CATERING",
+   "street": "3714 THOMASVILLE RD",
+   "zip": "39834"
+  },
+  "12995611": {
+   "city": "BYROMVILLE",
+   "county": "Dooly",
+   "id": 12995611,
+   "inspections": [
+    {
+     "date": "2024-04-17",
+     "insp_id": 57402584,
+     "score": 99
+    },
+    {
+     "date": "2025-04-09",
+     "insp_id": 57460638,
+     "score": 100
+    },
+    {
+     "date": "2026-06-09",
+     "insp_id": 57534422,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "4Angels of Byromville Healthcare Center",
+   "street": "712 PATTERSON ST",
+   "zip": "31007"
+  },
+  "13000334": {
+   "city": "CHESTER",
+   "county": "Dodge",
+   "id": 13000334,
+   "inspections": [
+    {
+     "date": "2024-10-29",
+     "insp_id": 57434132,
+     "score": 100
+    },
+    {
+     "date": "2024-12-12",
+     "insp_id": 57442422,
+     "score": 91
+    },
+    {
+     "date": "2025-06-26",
+     "insp_id": 57474423,
+     "score": 93
+    },
+    {
+     "date": "2025-11-20",
+     "insp_id": 57498735,
+     "score": 81
+    },
+    {
+     "date": "2026-06-12",
+     "insp_id": 57535538,
+     "score": 89
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Sherri V's Kitchen",
+   "street": "106 MAIN ST",
+   "zip": "31012"
+  },
+  "13002315": {
+   "city": "BROOKS",
+   "county": "Fayette",
+   "id": 13002315,
+   "inspections": [
+    {
+     "date": "2025-07-01",
+     "insp_id": 57474262,
+     "score": 100
+    },
+    {
+     "date": "2025-08-25",
+     "insp_id": 57482557,
+     "score": 95
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Heavenly Coffeehouse and Market",
+   "street": "949 85 CONNECTOR HWY",
+   "zip": "30205"
   },
   "13007997": {
    "city": "DOUGLAS",
@@ -186,6 +634,22 @@
    "street": "P O BOX 2056",
    "zip": "31534"
   },
+  "13008285": {
+   "city": "LAWRENCEVILLE",
+   "county": "DeKalb",
+   "id": 13008285,
+   "inspections": [
+    {
+     "date": "2026-05-27",
+     "insp_id": 57532106,
+     "score": 81
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "THE SATIN SIP MOBILE BEVERAGE BAR (MOBILE)",
+   "street": "3300 MARJAN DR STE 16",
+   "zip": "30045"
+  },
   "13010050": {
    "city": "HORTENSE",
    "county": "Brantley",
@@ -207,6 +671,27 @@
    "street": "7154 SR-110 W",
    "zip": "31543"
   },
+  "13011944": {
+   "city": "IRWINVILLE",
+   "county": "Irwin",
+   "id": 13011944,
+   "inspections": [
+    {
+     "date": "2026-05-05",
+     "insp_id": 57538324,
+     "score": 100
+    },
+    {
+     "date": "2026-06-30",
+     "insp_id": 57538365,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Irwinville Country Store",
+   "street": "1962 GA-32 HWY",
+   "zip": "31760"
+  },
   "13012036": {
    "city": "JENKINSBURG",
    "county": "Butts",
@@ -222,6 +707,22 @@
    "name": "Kingston ATL19 Jamaican Restaurant LLC",
    "street": "2093 HWY 42 UNIT F",
    "zip": "30234"
+  },
+  "13012236": {
+   "city": "EDEN",
+   "county": "Effingham",
+   "id": 13012236,
+   "inspections": [
+    {
+     "date": "2026-04-10",
+     "insp_id": 57544842,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Stoner's Pizza Joint",
+   "street": "1198 US 80",
+   "zip": "31307"
   },
   "13012493": {
    "city": "CECIL",
@@ -312,6 +813,78 @@
    "name": "Kingston ATL19 Jamaican Restaurant LLC-Base",
    "street": "2093 HWY 42 N STE F",
    "zip": "30234"
+  },
+  "17075": {
+   "city": "MANSFIELD",
+   "county": "Jasper",
+   "id": 17075,
+   "inspections": [
+    {
+     "date": "2024-10-30",
+     "insp_id": 57434251,
+     "score": 96
+    },
+    {
+     "date": "2025-03-06",
+     "insp_id": 57453741,
+     "score": 100
+    },
+    {
+     "date": "2025-06-25",
+     "insp_id": 57473060,
+     "score": 100
+    },
+    {
+     "date": "2025-11-18",
+     "insp_id": 57497990,
+     "score": 100
+    },
+    {
+     "date": "2026-06-22",
+     "insp_id": 57536680,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Preaching Rock Dining Hall",
+   "street": "543 ELLIOTT TRL",
+   "zip": "30055"
+  },
+  "17341": {
+   "city": "BELLVILLE",
+   "county": "Evans",
+   "id": 17341,
+   "inspections": [
+    {
+     "date": "2024-02-29",
+     "insp_id": 57395307,
+     "score": 90
+    },
+    {
+     "date": "2024-08-22",
+     "insp_id": 57422738,
+     "score": 96
+    },
+    {
+     "date": "2025-03-20",
+     "insp_id": 57456213,
+     "score": 91
+    },
+    {
+     "date": "2025-08-14",
+     "insp_id": 57481002,
+     "score": 89
+    },
+    {
+     "date": "2026-04-30",
+     "insp_id": 57527652,
+     "score": 97
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Pinewood Christian Academy",
+   "street": "1 BUCK CRAVEY DR",
+   "zip": "30414"
   },
   "17438": {
    "city": "RAY CITY",
@@ -442,37 +1015,41 @@
    "street": "260 EUREKA CHURCH RD",
    "zip": "30150"
   },
-  "2418013": {
-   "city": "",
-   "county": "Fulton",
-   "id": 2418013,
+  "2800": {
+   "city": "PO BOX 276 CHESTER",
+   "county": "Dodge",
+   "id": 2800,
    "inspections": [
     {
-     "date": "2011-09-30",
-     "insp_id": 3904718,
-     "score": 97
-    }
-   ],
-   "kind": "Food Service Inspections",
-   "name": "Yumbii #2",
-   "street": "1465 CHATTAHOOCHEE AVE ATLANTA, GA 30318",
-   "zip": ""
-  },
-  "2490499": {
-   "city": "",
-   "county": "Fulton",
-   "id": 2490499,
-   "inspections": [
+     "date": "2024-06-20",
+     "insp_id": 57413912,
+     "score": 89
+    },
     {
-     "date": "2012-06-04",
-     "insp_id": 4564295,
+     "date": "2024-11-21",
+     "insp_id": 57441021,
+     "score": 87
+    },
+    {
+     "date": "2025-06-05",
+     "insp_id": 57471222,
+     "score": 94
+    },
+    {
+     "date": "2025-11-20",
+     "insp_id": 57504175,
+     "score": 84
+    },
+    {
+     "date": "2026-06-24",
+     "insp_id": 57537382,
      "score": 100
     }
    ],
    "kind": "Food Service Inspections",
-   "name": "T.N.T.",
-   "street": "895 JOSEPH E. BOONE ATLANTA, GA 30314",
-   "zip": ""
+   "name": "Dodge Correctional Institute",
+   "street": "2971 OLD BETHEL RD",
+   "zip": "31012"
   },
   "3119796": {
    "city": "ELLENWOOD",
@@ -618,41 +1195,185 @@
    "street": "27823 MAIN ST",
    "zip": "39866"
   },
-  "3135465": {
-   "city": "ATLANTA",
-   "county": "Fulton",
-   "id": 3135465,
+  "3134833": {
+   "city": "CHESTER",
+   "county": "Dodge",
+   "id": 3134833,
    "inspections": [
     {
-     "date": "2023-08-28",
-     "insp_id": 57365261,
-     "score": 93
-    },
-    {
-     "date": "2024-11-18",
-     "insp_id": 57437130,
-     "score": 90
-    },
-    {
-     "date": "2025-06-30",
-     "insp_id": 57473994,
+     "date": "2024-06-20",
+     "insp_id": 57413907,
      "score": 91
     },
     {
-     "date": "2025-12-10",
-     "insp_id": 57501749,
-     "score": 96
+     "date": "2024-11-21",
+     "insp_id": 57441013,
+     "score": 100
     },
     {
-     "date": "2026-06-15",
-     "insp_id": 57535725,
-     "score": 94
+     "date": "2025-06-05",
+     "insp_id": 57471207,
+     "score": 84
+    },
+    {
+     "date": "2025-11-20",
+     "insp_id": 57504167,
+     "score": 90
+    },
+    {
+     "date": "2026-06-24",
+     "insp_id": 57537378,
+     "score": 100
     }
    ],
    "kind": "Food Service Inspections",
-   "name": "Henderson Student Center - Main Kitchen",
-   "street": "765 ATLANTA STUDENT MOVEMENT BLVD",
-   "zip": "30214"
+   "name": "Dodge State Prision Staff Dining",
+   "street": "2971 OLD BETHEL RD",
+   "zip": "31012"
+  },
+  "3140665": {
+   "city": "TALLULAH FALLS",
+   "county": "Habersham",
+   "id": 3140665,
+   "inspections": [
+    {
+     "date": "2024-05-03",
+     "insp_id": 57405332,
+     "score": 99
+    },
+    {
+     "date": "2024-11-19",
+     "insp_id": 57437333,
+     "score": 99
+    },
+    {
+     "date": "2025-05-07",
+     "insp_id": 57465433,
+     "score": 100
+    },
+    {
+     "date": "2025-09-15",
+     "insp_id": 57486195,
+     "score": 100
+    },
+    {
+     "date": "2026-03-25",
+     "insp_id": 57520761,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "TALLULAH FALLS SCHOOL",
+   "street": "201 CAMPUS DR",
+   "zip": "30573"
+  },
+  "3140682": {
+   "city": "TALLULAH FALLS",
+   "county": "Habersham",
+   "id": 3140682,
+   "inspections": [
+    {
+     "date": "2019-06-10",
+     "insp_id": 56003293,
+     "score": 88
+    },
+    {
+     "date": "2019-12-19",
+     "insp_id": 56546814,
+     "score": 92
+    },
+    {
+     "date": "2022-11-08",
+     "insp_id": 57324264,
+     "score": 89
+    },
+    {
+     "date": "2024-06-27",
+     "insp_id": 57413362,
+     "score": 90
+    },
+    {
+     "date": "2026-05-08",
+     "insp_id": 57529081,
+     "score": 91
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "VICTORY HOME",
+   "street": "320 VICTORY LN",
+   "zip": "30573"
+  },
+  "3140876": {
+   "city": "TALLULAH FALLS",
+   "county": "Habersham",
+   "id": 3140876,
+   "inspections": [
+    {
+     "date": "2023-12-11",
+     "insp_id": 57382796,
+     "score": 100
+    },
+    {
+     "date": "2024-11-19",
+     "insp_id": 57437343,
+     "score": 100
+    },
+    {
+     "date": "2025-04-21",
+     "insp_id": 57462351,
+     "score": 100
+    },
+    {
+     "date": "2025-09-15",
+     "insp_id": 57486200,
+     "score": 100
+    },
+    {
+     "date": "2026-03-25",
+     "insp_id": 57520781,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "TALLULAH FALLS SCHOOL STUDENT CENTER",
+   "street": "315 CAMPUS DR",
+   "zip": "30573"
+  },
+  "3141217": {
+   "city": "TALLULAH FALLS",
+   "county": "Habersham",
+   "id": 3141217,
+   "inspections": [
+    {
+     "date": "2024-05-03",
+     "insp_id": 57405325,
+     "score": 100
+    },
+    {
+     "date": "2024-11-19",
+     "insp_id": 57437362,
+     "score": 91
+    },
+    {
+     "date": "2025-05-07",
+     "insp_id": 57465427,
+     "score": 100
+    },
+    {
+     "date": "2025-09-15",
+     "insp_id": 57486192,
+     "score": 100
+    },
+    {
+     "date": "2026-03-25",
+     "insp_id": 57520688,
+     "score": 97
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "TALLULAH FALLS MIDDLE SCHOOL CAMPUS",
+   "street": "295 SCENIC LOOP RD",
+   "zip": "30573"
   },
   "3150231": {
    "city": "TUNNEL HILL",
@@ -684,6 +1405,42 @@
    "name": "DOGWOOD BIBLE CAMP CAFETERIA - Seasonal",
    "street": "5296 DOGWOOD VALLEY RD",
    "zip": "30755"
+  },
+  "3866": {
+   "city": "CLIMAX",
+   "county": "Decatur",
+   "id": 3866,
+   "inspections": [
+    {
+     "date": "2024-01-22",
+     "insp_id": 57388724,
+     "score": 95
+    },
+    {
+     "date": "2024-08-13",
+     "insp_id": 57421038,
+     "score": 91
+    },
+    {
+     "date": "2025-03-05",
+     "insp_id": 57453587,
+     "score": 98
+    },
+    {
+     "date": "2025-10-30",
+     "insp_id": 57495235,
+     "score": 100
+    },
+    {
+     "date": "2026-04-21",
+     "insp_id": 57525682,
+     "score": 90
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "Decatur/Grady Headstart",
+   "street": "215 SCHOOL RD",
+   "zip": "39834"
   },
   "47606": {
    "city": "RAY CITY",
@@ -720,6 +1477,42 @@
    "name": "Ray's Mill Pond Cafe",
    "street": "875 RAY'S MILL POND ROAD",
    "zip": "31645"
+  },
+  "4988": {
+   "city": "STILLMORE",
+   "county": "Emanuel",
+   "id": 4988,
+   "inspections": [
+    {
+     "date": "2024-04-18",
+     "insp_id": 57403112,
+     "score": 100
+    },
+    {
+     "date": "2024-11-14",
+     "insp_id": 57436721,
+     "score": 100
+    },
+    {
+     "date": "2025-04-03",
+     "insp_id": 57459781,
+     "score": 100
+    },
+    {
+     "date": "2025-10-31",
+     "insp_id": 57495209,
+     "score": 100
+    },
+    {
+     "date": "2026-05-14",
+     "insp_id": 57530114,
+     "score": 99
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "David Emanuel Academy Cafeteria",
+   "street": "602 N FOURTH ST",
+   "zip": "30464"
   },
   "5263": {
    "city": "MORGAN",
@@ -792,6 +1585,42 @@
    "name": "CENTRAL STATE PRISON",
    "street": "4600 FULTON MILL RD",
    "zip": "31208"
+  },
+  "672325": {
+   "city": "PLAINVILLE",
+   "county": "Gordon",
+   "id": 672325,
+   "inspections": [
+    {
+     "date": "2024-03-26",
+     "insp_id": 57399319,
+     "score": 100
+    },
+    {
+     "date": "2024-10-21",
+     "insp_id": 57432589,
+     "score": 100
+    },
+    {
+     "date": "2025-03-24",
+     "insp_id": 57456696,
+     "score": 100
+    },
+    {
+     "date": "2025-09-15",
+     "insp_id": 57486035,
+     "score": 100
+    },
+    {
+     "date": "2026-02-24",
+     "insp_id": 57514486,
+     "score": 100
+    }
+   ],
+   "kind": "Food Service Inspections",
+   "name": "W L SWAIN SCHOOL",
+   "street": "2505 ROME RD",
+   "zip": "30733"
   },
   "729762": {
    "city": "",
@@ -917,42 +1746,6 @@
    "street": "10215 HWY. 305",
    "zip": "30811"
   },
-  "875496": {
-   "city": "",
-   "county": "Fulton",
-   "id": 875496,
-   "inspections": [
-    {
-     "date": "2011-09-12",
-     "insp_id": 1653639,
-     "score": 92
-    },
-    {
-     "date": "2012-03-16",
-     "insp_id": 4285243,
-     "score": 94
-    },
-    {
-     "date": "2012-09-26",
-     "insp_id": 5500729,
-     "score": 96
-    },
-    {
-     "date": "2013-07-09",
-     "insp_id": 11526322,
-     "score": 96
-    },
-    {
-     "date": "2014-02-28",
-     "insp_id": 12509823,
-     "score": 97
-    }
-   ],
-   "kind": "Food Service Inspections",
-   "name": "Fellini's Pizza",
-   "street": "4429 ROSWELL RD ATLANTA, GA 30342",
-   "zip": ""
-  },
   "884570": {
    "city": "RED OAK",
    "county": "Fulton",
@@ -988,43 +1781,6 @@
    "name": "The Peking Restaurant",
    "street": "3461 ROOSEVELT HWY",
    "zip": "30272"
-  },
-  "886590": {
-   "city": "",
-   "county": "Fulton",
-   "id": 886590,
-   "inspections": [
-    {
-     "date": "2010-10-19",
-     "insp_id": 1355165,
-     "score": 97
-    },
-    {
-     "date": "2012-03-21",
-     "insp_id": 4285584,
-     "score": 98
-    }
-   ],
-   "kind": "Food Service Inspections",
-   "name": "Taco Bell",
-   "street": "1761 HOWELL MILL NW ATLANTA, GA 30318",
-   "zip": ""
-  },
-  "890926": {
-   "city": "",
-   "county": "Fulton",
-   "id": 890926,
-   "inspections": [
-    {
-     "date": "2010-10-29",
-     "insp_id": 1428463,
-     "score": 98
-    }
-   ],
-   "kind": "Food Service Inspections",
-   "name": "SAVANNAH'S",
-   "street": "3342 PEACHTREE RD ATLANTA, GA 30326",
-   "zip": ""
   },
   "9486404": {
    "city": "HARALSON",
