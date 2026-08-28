@@ -228,6 +228,12 @@ jobs:
       # A scrape fails quietly: upstream markup changes and the payload comes
       # back empty while everything still "succeeds". Fail the run instead of
       # deploying a broken dataset over a good one.
+      # Violation counts for the newest inspection at each place, a slice at a
+      # time. ~27k reports is four hours in one sitting; 1500 a run fills in
+      # over a few weeks and then only new inspections cost anything.
+      - name: Backfill violation counts
+        run: python3 crawler/crawl.py --rebuild --reports 1500 --delay 0.5
+
       - name: Verify the payload
         run: python3 scripts/verify_data.py
 
@@ -236,7 +242,8 @@ jobs:
           git config user.name "score-bot"
           git config user.email "score-bot@users.noreply.github.com"
           git add data/ web/public/counties.json web/public/version.json \
-                  web/public/places/ web/public/history/
+                  web/public/changes.json web/public/chains.json \
+                  web/public/trend.json web/public/places/ web/public/history/
           if git diff --staged --quiet; then
             echo "No changes to commit."
             exit 0

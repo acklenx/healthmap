@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Score">
-<link rel="manifest" href="/manifest.webmanifest?cache-id=3a7f7ba3">
+<link rel="manifest" href="/manifest.webmanifest?cache-id=1f31ccbb">
 <link rel="icon" href="/icons/icon.svg?cache-id=2290448a" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/icon-192.png?cache-id=2290448a">
-<link rel="stylesheet" href="/styles.css?cache-id=3a7f7ba3">
+<link rel="stylesheet" href="/styles.css?cache-id=1f31ccbb">
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
 </head>
 <body>
@@ -218,6 +218,24 @@
   </section>
 </div>
 
+<!-- What changed since the last crawl. -->
+<div id="newsheet" class="sheet" hidden>
+  <div class="sheet-scrim" data-close></div>
+  <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="new-title">
+    <div class="sheet-grab" data-close></div>
+    <div class="sheet-head">
+      <div>
+        <h2 id="new-title">Newly scored</h2>
+        <p id="new-sub" class="sheet-sub"></p>
+      </div>
+      <button id="new-close" class="icon-btn" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="new-body"></div>
+  </section>
+</div>
+
 <!-- Coverage and crawl status. -->
 <div id="statussheet" class="sheet" hidden>
   <div class="sheet-scrim" data-close></div>
@@ -287,6 +305,14 @@
         <svg class="menu-go" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg>
       </button>
 
+      <button id="menu-new" class="menu-row" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 4.2v15.6M4.2 12h15.6"/>
+        </svg>
+        <span><b>Newly scored</b><small>Inspections posted since the last crawl</small></span>
+        <svg class="menu-go" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg>
+      </button>
+
       <button id="menu-status" class="menu-row" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M12 3.6 20.4 8v8L12 20.4 3.6 16V8Z"/><path d="M12 12v8.4M12 12 3.6 8M12 12l8.4-4"/>
@@ -345,6 +371,13 @@
           </svg>Saved</button>
       </div>
 
+      <h3 class="sec-title">Findings</h3>
+      <div class="chips" role="group" aria-label="Findings">
+        <button class="chip" id="chip-rf" data-rf="1" type="button" aria-pressed="false">
+          Critical violations only</button>
+      </div>
+      <p id="rf-note" class="sheet-hint"></p>
+
       <h3 class="sec-title">Grades</h3>
       <div class="chips" role="group" aria-label="Grades">
         <button class="chip chip-grade is-on" data-grade="A" type="button" aria-pressed="true"><i data-g="A"></i>A</button>
@@ -400,6 +433,6 @@
   </section>
 </div>
 
-<script src="/app.js?cache-id=3a7f7ba3" type="module"></script>
+<script src="/app.js?cache-id=1f31ccbb" type="module"></script>
 </body>
 </html>

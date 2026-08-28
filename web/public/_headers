@@ -60,6 +60,17 @@
 /places/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Written by the crawler alongside the payload, and requested with the same
+# ?v=<generated> stamp, so each is immutable for its generation.
+/changes.json
+  Cache-Control: public, max-age=31536000, immutable
+
+/chains.json
+  Cache-Control: public, max-age=31536000, immutable
+
+/trend.json
+  Cache-Control: public, max-age=31536000, immutable
+
 # Same stamp as the payload, same reasoning.
 /history/*
   Cache-Control: public, max-age=31536000, immutable

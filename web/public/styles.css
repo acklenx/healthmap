@@ -288,6 +288,21 @@ main { padding: 0 14px; }
   margin-right: 3px;
   stroke-width: 2.3;
 }
+/* Direction, not magnitude -- the exact delta is in the sheet's chart. Colour
+   is reinforcement here: the glyph already says which way. */
+.trend {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 1px;
+}
+.trend[data-dir="up"]   { color: var(--grade-a); background: color-mix(in srgb, var(--grade-a) 12%, transparent); }
+.trend[data-dir="down"] { color: var(--grade-u); background: color-mix(in srgb, var(--grade-u) 12%, transparent); }
+
 .card-star { width: 13px; height: 13px; fill: currentColor; stroke: none; color: var(--ink-muted); vertical-align: -1px; margin-right: 3px; }
 
 /* A button that reads as part of the sentence it sits in. */
@@ -590,6 +605,16 @@ main { padding: 0 14px; }
 .dist-fill[data-g="U"] { background: var(--grade-u); }
 .dist-n { text-align: right; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .dist-n small { margin-left: 5px; color: var(--ink-muted); font-weight: 500; }
+
+/* Yearly means. Bars, not a line: the years are buckets, not a signal, and a
+   line between them implies a continuity the data does not have. */
+.trendbars { display: flex; align-items: flex-end; gap: 4px; height: 132px; margin: 4px 0 0; }
+.tb { flex: 1 1 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: flex-end; height: 100%; min-width: 0; }
+.tb-bar { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--accent);
+          min-height: 2px; }
+.tb-val { margin-top: 3px; font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tb-year { color: var(--ink-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 
 /* Wide content scrolls inside its own box rather than the page. */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

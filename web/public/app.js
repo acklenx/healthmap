@@ -26,7 +26,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "3a7f7ba3", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "1f31ccbb", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -75,6 +75,7 @@ const el = {
   statusProgress: $("#status-progress"), statusRuns: $("#status-runs"),
   statusCounties: $("#status-counties"), statusMapCanvas: $("#status-map-canvas"),
   statusLive: $("#status-live"), statusLegend: $("#status-legend"),
+  newSheet: $("#newsheet"), newBody: $("#new-body"), newSub: $("#new-sub"),
   shareSheet: $("#sharesheet"), shareQr: $("#share-qr"), shareLink: $("#share-link"),
   shareSub: $("#share-sub"), shareCopy: $("#share-copy"), shareCopyLabel: $("#share-copy-label"),
   shareNative: $("#share-native"),
@@ -93,6 +94,9 @@ const state = {
   // list arrives a county at a time, nearest first.
   manifest: null,
   loaded: new Set(),
+  // True when the dataset is too large to load blind and there is no position
+  // yet, so nothing has been fetched and the app is waiting to be told where.
+  awaitingLocation: false,
   georgia: null,          // all 159 counties and where they are
   // home  = where distances are measured from. Persisted; drives the whole app.
   // gps   = the device's own last fix. Live, never persisted, never sorts.
@@ -106,6 +110,9 @@ const state = {
   // because "just the U's" is a real thing to want to look at and those two
   // canned options could not express it.
   grades: new Set(["A", "B", "C", "U"]),
+  // Only places whose latest inspection recorded a foodborne-illness risk
+  // factor. Off by default; the data behind it fills in over several crawls.
+  riskOnly: false,
   sort: "dist",
   query: "",
   shown: PAGE,
@@ -285,9 +292,12 @@ async function loadGeneration(stamp) {
   // datasets are loaded whole because that costs nothing and keeps search
   // honest; past that, wait to be told where they are.
   if (!state.home && !state.gps && manifest.places > WHOLE_DATASET_PLACES) {
+    state.awaitingLocation = true;
+    syncCoverage();
     render();
     return;
   }
+  state.awaitingLocation = false;
 
   // Await only the first. The nearest twenty places are almost certainly in
   // the county you are standing in, so the list is right as soon as it lands.
@@ -386,6 +396,8 @@ async function ingestCounty(county, stamp) {
       // carrying the rest was half the wire size of the payload.
       history: null,
       historyCount: p.hn,
+      previous: p.pv ?? null,
+      risk: p.rf ?? null,
       // Precomputed once so filtering/searching stays cheap across ~13k rows.
       search: `${p.n} ${p.a} ${p.c}`.toLowerCase(),
       latest: p.l ? { date: p.l[0], score: p.l[1], inspId: p.l[2] } : null,
@@ -400,9 +412,15 @@ function syncCoverage() {
   const loaded = state.manifest.counties.filter((c) => state.loaded.has(c.s));
   const rest = unloadedCounties();
   const names = loaded.map((c) => c.c).sort();
-  const where = names.length <= 4
-    ? names.join(", ")
-    : `${names.length} counties`;
+  if (!names.length) {
+    // Nothing loaded yet: "0 places in " reads as a bug rather than a state.
+    el.freshness.textContent =
+      `${state.manifest.places.toLocaleString()} places across ` +
+      `${state.manifest.counties.length} counties, ready to load · ` +
+      `data refreshed ${relativeTime(state.generated)}`;
+    return;
+  }
+  const where = names.length <= 4 ? names.join(", ") : `${names.length} counties`;
   el.freshness.textContent =
     `${state.places.length.toLocaleString()} places in ${where}` +
     (rest.length ? ` · ${rest.length} more ${rest.length === 1 ? "county" : "counties"} available` : "") +
@@ -423,10 +441,15 @@ async function checkForUpdate() {
 
     await loadGeneration(generated);
     localStorage.setItem(KEY.version, generated);
-  } catch {
+  } catch (err) {
+    // Distinguish "the network is down" from "this code is broken". The second
+    // spent a while masquerading as the first, because both ended up here.
+    const offline = !navigator.onLine || err instanceof TypeError;
+    if (!offline) console.error("loading the dataset failed:", err);
     if (!state.places.length) {
-      el.status.textContent =
-        "Couldn't reach the inspection data. Check your connection and reload.";
+      el.status.textContent = offline
+        ? "Couldn't reach the inspection data. Check your connection and reload."
+        : "Something went wrong loading the data. Reloading may help.";
     }
   }
 }
@@ -792,6 +815,67 @@ function applyShareState() {
   // Leave the address bar clean; the state is in memory now.
   history.replaceState(null, "", location.pathname);
 }
+
+/* ---- newly scored -------------------------------------------------------- */
+
+/* The crawler diffs every run to work out what is new -- it has to, to know
+ * who to alert -- and that list used to be written to data/ where nothing
+ * could read it. The most newsworthy thing this dataset produces was being
+ * calculated and then discarded. */
+async function openNewSheet() {
+  setSheet(el.newSheet, true);
+  el.newBody.innerHTML = `<p class="cover-note">Loading…</p>`;
+  el.newSub.textContent = "";
+
+  let feed;
+  try {
+    const res = await fetch(`/changes.json?v=${encodeURIComponent(state.generated)}`);
+    if (!res.ok) throw new Error(String(res.status));
+    feed = await res.json();
+  } catch {
+    el.newBody.innerHTML = `<p class="cover-note">Couldn't load the list of new
+      scores. It publishes with each crawl, so there may not be one yet.</p>`;
+    return;
+  }
+
+  const all = feed.changes || [];
+  // Narrowed to the counties actually loaded, because a statewide list of new
+  // scores is a firehose and none of it is near you.
+  const near = new Set(state.manifest?.counties
+    .filter((c) => state.loaded.has(c.s)).map((c) => c.c) || []);
+  const rows = all.filter((c) => !c.county || near.has(c.county));
+  const hidden = all.length - rows.length;
+
+  el.newSub.textContent = feed.generated
+    ? `Posted in the crawl of ${relativeTime(feed.generated)}`
+    : "";
+
+  if (!all.length) {
+    el.newBody.innerHTML = `<p class="cover-note">Nothing new in the last crawl —
+      which is normal. A run often finds none at all.</p>`;
+    return;
+  }
+
+  el.newBody.innerHTML = rows.length
+    ? `<ol class="list">${rows.map((c) => {
+        const g = gradeFor(c.score);
+        return `<li><button class="card" type="button" data-id="${c.id}">
+          <span class="badge" data-g="${g}">${g}<small>${c.score}</small></span>
+          <span class="card-main">
+            <span class="card-name">${escapeHTML(titleCase(c.name))}</span>
+            <span class="card-sub">${escapeHTML(titleCase(c.city || ""))}${
+              c.county ? ` · ${escapeHTML(c.county)} County` : ""}</span>
+          </span>
+          <span class="card-meta"><span class="card-age">${formatDate(c.date)}</span></span>
+        </button></li>`;
+      }).join("")}</ol>` +
+      (hidden ? `<p class="sheet-hint">${hidden} more elsewhere in Georgia, in
+        counties this device hasn't loaded.</p>` : "")
+    : `<p class="cover-note">${all.length} new ${all.length === 1 ? "score" : "scores"}
+       statewide, none in the counties loaded here.</p>`;
+}
+
+function closeNewSheet() { setSheet(el.newSheet, false); }
 
 /* ---- coverage and crawl status ------------------------------------------ */
 
@@ -1378,6 +1462,66 @@ function statsHTML(rows) {
       invite a conclusion the data cannot support.</p>`;
 }
 
+/* Statewide aggregates, computed by the crawler.
+ *
+ * Both of these have to be: the app only ever loads the counties near you, so
+ * a chain table assembled client-side would compare a brand against itself in
+ * one metro and label the result Georgia. */
+let extras = null;
+
+async function loadExtras() {
+  if (extras) return extras;
+  const stamp = encodeURIComponent(state.generated);
+  const [chains, trend] = await Promise.all([
+    fetch(`/chains.json?v=${stamp}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    fetch(`/trend.json?v=${stamp}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+  ]);
+  extras = { chains: chains?.chains || [], trend };
+  return extras;
+}
+
+/** Yearly means as bars. Not a line: the years are buckets, not a signal. */
+function trendHTML(trend) {
+  if (!trend?.all) return "";
+  const years = Object.entries(trend.all);
+  if (years.length < 3) return "";
+  const means = years.map(([, [, m]]) => m);
+  const lo = Math.floor(Math.min(...means) - 1);
+  const hi = Math.ceil(Math.max(...means) + 1);
+  const span = hi - lo || 1;
+
+  return `<h3 class="sec-title">Scores over time</h3>
+    <div class="trendbars">${years.map(([y, [n, m]]) => `
+      <div class="tb" title="${y}: ${n.toLocaleString()} inspections, mean ${m}">
+        <span class="tb-bar" style="height:${(((m - lo) / span) * 100).toFixed(1)}%"></span>
+        <span class="tb-val">${m}</span>
+        <span class="tb-year">${y.slice(2)}</span>
+      </div>`).join("")}</div>
+    <p class="sheet-hint">Mean score by year, over every inspection on record —
+      ${years[0][0]} to ${years[years.length - 1][0]}. Years with fewer than 30
+      inspections are left out. Read it carefully: inspection frequency varies,
+      so a year that moves may reflect who was visited rather than who improved.</p>`;
+}
+
+function chainsHTML(chains) {
+  if (!chains.length) return "";
+  const rows = chains.slice(0, 40).map((c) => `<tr>
+      <th scope="row">${escapeHTML(titleCase(c.n))}</th>
+      <td><b>${c.m}</b></td>
+      <td>${c.sd}</td>
+      <td>${c.c}</td>
+      <td><button class="linkish" data-place="${c.w.i}"
+            title="${escapeHTML(titleCase(c.w.n))}, ${escapeHTML(titleCase(c.w.c))}">${c.w.s}</button></td>
+    </tr>`).join("");
+  return `<h3 class="sec-title">Chains</h3>
+    <div class="table-wrap"><table class="area-table">
+      <thead><tr><th scope="col">Brand</th><th scope="col">Avg</th>
+        <th scope="col">SD</th><th scope="col">Sites</th><th scope="col">Worst</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <p class="sheet-hint">Brands with at least eight locations in the crawled
+      counties, statewide rather than nearby. Tap a worst score to open it.</p>`;
+}
+
 function openStatsSheet() {
   const rows = state.view;
   const scope = [];
@@ -1390,6 +1534,12 @@ function openStatsSheet() {
   el.statsBody.innerHTML = statsHTML(rows);
   el.statsBody.scrollTop = 0;
   setSheet(el.statsSheet, true);
+
+  // Appended once they arrive, so the sheet is useful immediately.
+  loadExtras().then(({ chains, trend }) => {
+    if (el.statsSheet.hidden) return;
+    el.statsBody.insertAdjacentHTML("beforeend", trendHTML(trend) + chainsHTML(chains));
+  });
 }
 
 function closeStatsSheet() { setSheet(el.statsSheet, false); }
@@ -1406,7 +1556,26 @@ function openMoreSheet() {
 
 function closeMoreSheet() { setSheet(el.moreSheet, false, el.moreBtn); }
 
+/** Say how much of the violation backfill exists, so an empty result is not
+ *  mistaken for a clean bill of health. */
+function syncRiskNote() {
+  const m = state.manifest;
+  const note = $("#rf-note");
+  if (!m || !note) return;
+  const known = m.rf_known || 0;
+  const pct = m.places ? (known / m.places) * 100 : 0;
+  note.innerHTML = pct >= 99
+    ? `Findings are on record for every place. A "critical violation" is one the
+       state designates a foodborne-illness risk factor — temperature, handwashing,
+       cross-contamination — rather than any violation at all.`
+    : `<b>Still being collected.</b> Findings are on record for
+       ${known.toLocaleString()} of ${m.places.toLocaleString()} places
+       (${pct < 1 ? "under 1" : pct.toFixed(0)}%), so this filter shows what is
+       known so far rather than everything there is. Each crawl fetches more.`;
+}
+
 function openFilterSheet() {
+  syncRiskNote();
   el.filterSheet.hidden = false;
   el.filterBtn.setAttribute("aria-expanded", "true");
   document.body.classList.add("sheet-open");
@@ -1422,8 +1591,8 @@ function closeFilterSheet() {
  * button says when one is on. Sort is not counted: there is always exactly one,
  * so a dot for it would be lit permanently and mean nothing. */
 function syncFilterDot() {
-  el.filterCount.hidden =
-    state.filter === "all" && state.grades.size === GRADE_BANDS.length;
+  el.filterCount.hidden = state.filter === "all"
+    && state.grades.size === GRADE_BANDS.length && !state.riskOnly;
 }
 
 /* Grades are a toggle set, not a choice of one. The last one on cannot be
@@ -1443,7 +1612,16 @@ function toggleGrade(letter) {
 }
 
 function syncGradeChips() {
-  document.querySelectorAll("[data-grade]").forEach((b) => {
+  $("#chip-rf").addEventListener("click", () => {
+  state.riskOnly = !state.riskOnly;
+  state.shown = PAGE;
+  $("#chip-rf").classList.toggle("is-on", state.riskOnly);
+  $("#chip-rf").setAttribute("aria-pressed", String(state.riskOnly));
+  syncFilterDot();
+  render();
+});
+
+document.querySelectorAll("[data-grade]").forEach((b) => {
     const on = state.grades.has(b.dataset.grade);
     b.classList.toggle("is-on", on);
     b.setAttribute("aria-pressed", String(on));
@@ -1466,6 +1644,10 @@ function computeView() {
 
   if (state.filter === "fav") {
     rows = rows.filter((p) => state.favorites.has(p.id));
+  }
+
+  if (state.riskOnly) {
+    rows = rows.filter((p) => p.risk > 0);
   }
 
   if (state.grades.size < GRADE_BANDS.length) {
@@ -1506,6 +1688,16 @@ function cardHTML(p) {
   // An approximate distance is measured from the middle of a ZIP code, so it
   // is marked in the list rather than only inside the sheet -- the whole point
   // of sorting by distance is that the top of the list is trustworthy.
+  // The direction of travel, which is the app's own argument: 95 -> 88 -> 71
+  // and 71 -> 88 -> 95 are different restaurants and used to look identical.
+  // Only shown when it is worth reading -- a point either way is noise.
+  const move = p.latest && p.previous != null ? p.latest.score - p.previous : 0;
+  const trend = Math.abs(move) >= 3
+    ? `<span class="trend" data-dir="${move > 0 ? "up" : "down"}"
+         title="${move > 0 ? "Up" : "Down"} ${Math.abs(move)} from ${p.previous}">${
+         move > 0 ? "▲" : "▼"}${Math.abs(move)}</span>`
+    : "";
+
   const dist = p.distance != null
     ? `<span class="card-dist${p.precision === 0 ? " is-approx" : ""}">` +
       `${p.precision === 0 ? APPROX_ICON : ""}${formatDistance(p.distance)}</span>`
@@ -1514,7 +1706,7 @@ function cardHTML(p) {
     <span class="badge" data-g="${grade}">${grade}<small>${latest ? latest.score : "—"}</small></span>
     <span class="card-main">
       <span class="card-name">${star}${escapeHTML(p.name)}</span>
-      <span class="card-sub">${escapeHTML(p.street)}, ${escapeHTML(p.city)}</span>
+      <span class="card-sub">${trend}${escapeHTML(p.street)}, ${escapeHTML(p.city)}</span>
     </span>
     <span class="card-meta">${dist}<span class="card-age">${
       latest ? `Scored ${inspectionAge(latest.date)}` : "Never scored"
@@ -1535,6 +1727,23 @@ function render({ recompute = true } = {}) {
   if (recompute) state.view = computeView();
   el.list.innerHTML = "";
   appendRows();
+
+  // Nothing loaded and nowhere to load from. This is the front door for every
+  // new visitor now that the dataset is statewide, and it used to sit on
+  // "Loading inspections…" forever, which reads as broken rather than as a
+  // question. Ask the question.
+  if (state.awaitingLocation && !state.places.length) {
+    el.status.hidden = false;
+    el.status.innerHTML =
+      `<b>Where are you?</b> There are
+       ${state.manifest.places.toLocaleString()} places across
+       ${state.manifest.counties.length} Georgia counties — far too many to send
+       to a phone at once, so the app loads the ones near you.
+       <button id="status-locate" class="linkish" type="button">Use my location</button>
+       or <button id="status-zip" class="linkish" type="button">enter a ZIP code</button>.`;
+    el.empty.hidden = true;
+    return;
+  }
 
   el.status.hidden = state.places.length > 0;
   el.empty.hidden = state.view.length > 0 || !state.places.length;
@@ -2465,6 +2674,15 @@ document.querySelectorAll("[data-sort]").forEach((b) =>
   b.addEventListener("click", () => setSort(b.dataset.sort))
 );
 
+$("#chip-rf").addEventListener("click", () => {
+  state.riskOnly = !state.riskOnly;
+  state.shown = PAGE;
+  $("#chip-rf").classList.toggle("is-on", state.riskOnly);
+  $("#chip-rf").setAttribute("aria-pressed", String(state.riskOnly));
+  syncFilterDot();
+  render();
+});
+
 document.querySelectorAll("[data-grade]").forEach((b) =>
   b.addEventListener("click", () => toggleGrade(b.dataset.grade))
 );
@@ -2472,6 +2690,11 @@ document.querySelectorAll("[data-grade]").forEach((b) =>
 el.filterBtn.addEventListener("click", openFilterSheet);
 // One locate behaviour, three places to reach it.
 el.mapLocate.addEventListener("click", () => el.locate.click());
+
+el.status.addEventListener("click", (e) => {
+  if (e.target.closest("#status-locate")) el.locate.click();
+  if (e.target.closest("#status-zip")) openLocationSheet();
+});
 
 el.empty.addEventListener("click", (e) => {
   if (!e.target.closest("#load-all")) return;
@@ -2500,6 +2723,12 @@ $("#menu-loc").addEventListener("click", () => { closeMoreSheet(); openLocationS
 $("#menu-stats").addEventListener("click", () => { closeMoreSheet(); openStatsSheet(); });
 $("#menu-share").addEventListener("click", () => { closeMoreSheet(); openShareSheet(); });
 $("#menu-status").addEventListener("click", () => { closeMoreSheet(); openStatusSheet(); });
+$("#menu-new").addEventListener("click", () => { closeMoreSheet(); openNewSheet(); });
+el.newSheet.addEventListener("click", (e) => {
+  if (e.target.closest("[data-close]") || e.target.closest("#new-close")) return closeNewSheet();
+  const card = e.target.closest(".card[data-id]");
+  if (card) { closeNewSheet(); openSheet(Number(card.dataset.id)); }
+});
 el.statusSheet.addEventListener("click", (e) => {
   if (e.target.closest("[data-close]") || e.target.closest("#status-close")) closeStatusSheet();
 });
@@ -2525,7 +2754,9 @@ el.shareNative.addEventListener("click", () => {
   }).catch(() => {});
 });
 el.statsSheet.addEventListener("click", (e) => {
-  if (e.target.closest("[data-close]") || e.target.closest("#stats-close")) closeStatsSheet();
+  if (e.target.closest("[data-close]") || e.target.closest("#stats-close")) return closeStatsSheet();
+  const jump = e.target.closest("[data-place]");
+  if (jump) { closeStatsSheet(); openSheet(Number(jump.dataset.place)); }
 });
 el.filterSheet.addEventListener("click", (e) => {
   if (e.target.closest("[data-close]") || e.target.closest("#filter-close")) closeFilterSheet();
@@ -2635,6 +2866,7 @@ document.addEventListener("keydown", (e) => {
   closeStatsSheet();
   closeShareSheet();
   closeStatusSheet();
+  closeNewSheet();
   closeSheet();
 });
 

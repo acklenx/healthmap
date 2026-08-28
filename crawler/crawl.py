@@ -19,6 +19,7 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -178,9 +179,15 @@ def load_store():
                     "id": p["i"], "name": p["n"], "street": p["a"],
                     "city": p["c"], "zip": p["z"], "county": p["o"],
                     "lat": p["y"], "lon": p["x"], "precision": p["p"],
+                    # Rows are [date, score, insp_id] with two optional
+                    # trailing counts. Indexed rather than unpacked so adding a
+                    # field later does not break reading what came before it --
+                    # which is exactly what unpacking three did.
                     "inspections": [
-                        {"date": d, "score": sc, "insp_id": ii}
-                        for d, sc, ii in history.get(str(p["i"]), [])
+                        {"date": r[0], "score": r[1], "insp_id": r[2],
+                         **({"vn": r[3]} if len(r) > 3 and r[3] is not None else {}),
+                         **({"rf": r[4]} if len(r) > 4 and r[4] is not None else {})}
+                        for r in history.get(str(p["i"]), [])
                     ],
                 }
 
@@ -252,6 +259,10 @@ def merge(store, fresh):
                     {
                         "id": eid,
                         "name": est["name"],
+                        # County and city so the feed can be narrowed to where
+                        # you are; a statewide list of new scores is a firehose.
+                        "county": est.get("county"),
+                        "city": est.get("city"),
                         "date": i["date"],
                         "score": i["score"],
                         "grade": source.grade_for(i["score"]),
@@ -295,6 +306,14 @@ def build_payload(store):
                 "x": est["lon"],
                 "p": est.get("precision", 0),
                 "l": [latest["date"], latest["score"], latest["insp_id"]],
+                # The score before this one. The list's whole argument is that
+                # history matters more than a single number, and then it showed
+                # a single number: 95 -> 88 -> 71 and 71 -> 88 -> 95 looked
+                # identical. One extra integer fixes that.
+                "pv": history[1]["score"] if len(history) > 1 else None,
+                # Risk-factor count on the latest inspection, when known, so
+                # the list can be filtered by it without loading any history.
+                "rf": latest.get("rf"),
                 "hn": len(history),
             }
         )
@@ -338,6 +357,134 @@ def build_shards(places):
     return by_county, manifest
 
 
+# Store numbers, unit numbers and the like, so "Waffle House 924" and
+# "WAFFLE HOUSE #1710" land in the same bucket.
+_CHAIN_TAIL = re.compile(r"\s*(?:#\s*)?\d[\d\-]*\s*$")
+_CHAIN_NOISE = re.compile(r"\s*(?:llc|inc\.?|corp\.?|co\.?)\s*$", re.I)
+
+
+def chain_key(name):
+    out = name.strip()
+    for _ in range(3):
+        out = _CHAIN_NOISE.sub("", _CHAIN_TAIL.sub("", out)).strip(" -,#")
+    return re.sub(r"\s+", " ", out).upper()
+
+
+def fetch_violations(store, budget, log=log):
+    """Fill in violation counts for the newest inspection at each place.
+
+    The reports are already parsed -- /api/report does it live when you tap an
+    inspection -- but only ever one at a time, so "which places near me have
+    had a critical violation" is unanswerable, which is the question underneath
+    the whole app.
+
+    One report per establishment, newest first, and only ones not already
+    counted. That is ~27k fetches the first time, so `budget` caps how many a
+    run will do: it fills in over several runs rather than one four-hour job,
+    and after that only new inspections cost anything.
+
+    Stored as two integers per inspection: how many violations, and how many of
+    them the state designates foodborne-illness risk factors. Not the text --
+    that stays on demand, where it was already fine.
+    """
+    pending = []
+    for est in store.values():
+        if "lat" not in est or not est["inspections"]:
+            continue
+        latest = max(est["inspections"], key=lambda i: i["date"])
+        if "rf" not in latest:
+            pending.append((est, latest))
+    if not pending:
+        log("  violations: nothing outstanding")
+        return 0
+
+    todo = pending[:budget]
+    log("  violations: %d outstanding, fetching %d this run" % (len(pending), len(todo)))
+    done = 0
+    for est, insp in todo:
+        try:
+            page = source.fetch(source.report_url(est["id"], insp["insp_id"], est["county"]))
+            found = source.parse_report(page)["violations"]
+        except Exception as exc:
+            log("    report %s/%s failed: %s" % (est["id"], insp["insp_id"], exc))
+            continue
+        insp["vn"] = len(found)
+        insp["rf"] = sum(1 for v in found if v.get("risk_factor"))
+        done += 1
+    log("  violations: %d fetched, %d still outstanding" % (done, len(pending) - done))
+    return done
+
+
+def build_chains(store, min_locations=8):
+    """Brands with enough locations to say something about, statewide.
+
+    Computed here rather than in the app because the app only ever loads the
+    counties near you -- a chain view assembled client-side would compare a
+    brand against itself in one metro and call it Georgia.
+    """
+    groups = {}
+    for est in store.values():
+        if "lat" not in est or not est["inspections"]:
+            continue
+        latest = max(est["inspections"], key=lambda i: i["date"])
+        groups.setdefault(chain_key(est["name"]), []).append((est, latest["score"]))
+
+    chains = []
+    for key, members in groups.items():
+        if len(members) < min_locations:
+            continue
+        scores = sorted(s for _, s in members)
+        n = len(scores)
+        mean = sum(scores) / n
+        sd = (sum((x - mean) ** 2 for x in scores) / n) ** 0.5
+        grades = {"A": 0, "B": 0, "C": 0, "U": 0}
+        for s_ in scores:
+            grades[source.grade_for(s_)] += 1
+        worst = min(members, key=lambda m: m[1])
+        chains.append({
+            "n": key,
+            "c": n,
+            "m": round(mean, 1),
+            "sd": round(sd, 1),
+            "lo": scores[0],
+            "hi": scores[-1],
+            "g": [grades["A"], grades["B"], grades["C"], grades["U"]],
+            # Somewhere to go from the leaderboard.
+            "w": {"i": worst[0]["id"], "n": worst[0]["name"],
+                  "c": worst[0]["city"], "s": worst[1]},
+        })
+    chains.sort(key=lambda c: -c["c"])
+    return chains
+
+
+def build_trend(store):
+    """Average score by year, statewide and per county.
+
+    Every inspection carries a date, so this is arithmetic on data already
+    held -- and "is my county getting better or worse" is not answerable
+    anywhere else that I know of.
+    """
+    by_year = {}
+    by_county = {}
+    for est in store.values():
+        if "lat" not in est:
+            continue
+        county = est.get("county")
+        for i in est["inspections"]:
+            year = i["date"][:4]
+            if not year.isdigit():
+                continue
+            by_year.setdefault(year, []).append(i["score"])
+            by_county.setdefault(county, {}).setdefault(year, []).append(i["score"])
+
+    def series(d):
+        return {y: [len(v), round(sum(v) / len(v), 1)]
+                for y, v in sorted(d.items()) if len(v) >= 30}
+
+    return {"all": series(by_year),
+            "counties": {c: series(v) for c, v in sorted(by_county.items()) if series(v)}}
+
+
 def build_history(store):
     """Inspection history, keyed by establishment id, split one file per ZIP.
 
@@ -357,8 +504,11 @@ def build_history(store):
         if not history:
             continue
         zipcode = est["zip"] or "00000"
+        # Two optional trailing fields; older clients destructure the first
+        # three and ignore the rest.
         shards.setdefault(zipcode, {})[str(eid)] = [
-            [i["date"], i["score"], i["insp_id"]] for i in history
+            [i["date"], i["score"], i["insp_id"], i.get("vn"), i.get("rf")]
+            for i in history
         ]
     return shards
 
@@ -373,6 +523,10 @@ def main():
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--delay", type=float, default=0.5,
                     help="minimum seconds between requests, across all workers")
+    ap.add_argument("--reports", type=int, default=0,
+                    help="fetch violation counts for up to N inspections that "
+                         "lack them. Fills in over several runs rather than "
+                         "one very long one.")
     ap.add_argument("--sub", default="",
                     help="within the selected counties, crawl the kth of n "
                          "parts. Used to split one job into several steps so "
@@ -444,6 +598,9 @@ def main():
         log("  %s: %d establishments parsed" % (county, len(fresh)))
         all_changes.extend(merge(store, fresh))
 
+    if args.reports:
+        fetch_violations(store, args.reports)
+
     if not args.skip_geocode:
         cache = geocode.GeocodeCache(os.path.join(DATA, "geocache.json"))
         geocode.resolve(list(store.values()), cache, log=log)
@@ -465,10 +622,23 @@ def main():
         {"v": PAYLOAD_VERSION, "generated": generated,
          "places": len(places),
          "inspections": sum(p["hn"] for p in places),
+         # How far the violation backfill has got. The app needs this to say
+         # whether "no critical violations" means none or means not-yet-known.
+         "rf_known": sum(1 for p in places if p.get("rf") is not None),
          # Every county in the state, so the coverage page can show what is
          # missing as well as what is here.
          "all_counties": len(GEORGIA),
          "counties": manifest},
+        compact=True,
+    )
+    save_json(
+        os.path.join(WEB_PUBLIC, "chains.json"),
+        {"generated": generated, "chains": build_chains(store)},
+        compact=True,
+    )
+    save_json(
+        os.path.join(WEB_PUBLIC, "trend.json"),
+        {"generated": generated, **build_trend(store)},
         compact=True,
     )
     write_shards(os.path.join(WEB_PUBLIC, "places"),
@@ -477,6 +647,18 @@ def main():
     save_json(
         os.path.join(DATA, "changes.json"),
         {"generated": generated, "changes": all_changes},
+    )
+
+    # The same list, where the app can reach it. It was computed on every run
+    # and written only to data/, so the most newsworthy thing this dataset
+    # produces was being calculated and then thrown away. Kept to a few hundred
+    # so a quiet week does not publish an empty file and a busy one does not
+    # publish a novel.
+    recent = sorted(all_changes, key=lambda c: c.get("date", ""), reverse=True)[:400]
+    save_json(
+        os.path.join(WEB_PUBLIC, "changes.json"),
+        {"generated": generated, "changes": recent},
+        compact=True,
     )
     # The client polls this tiny file to decide whether to re-download the
     # dataset, and requests places.json?v=<generated> so the payload URL only

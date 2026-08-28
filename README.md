@@ -495,6 +495,38 @@ challenge script at `/cdn-cgi/challenge-platform/` uses three deprecated APIs
 and ships with a four-hour cache lifetime. Turning off Bot Fight Mode removes
 them.
 
+## What else it does
+
+**A trend marker on every row.** The app's argument is that history matters
+more than a single number, and the list showed a single number — 95 → 88 → 71
+and 71 → 88 → 95 looked identical. One extra integer in the payload fixes that.
+Shown only for moves of three points or more; a point either way is noise.
+
+**Newly scored.** The crawler diffs every run to work out what is new — it has
+to, to know who to alert — and that list was written only to `data/`, where
+nothing could read it. The most newsworthy thing this dataset produces was
+being calculated and then discarded. It publishes now, narrowed to the counties
+you have loaded.
+
+**Chains and trends**, in *Scores in this area*. Both are computed by the
+crawler rather than the client, because the app only loads the counties near
+you: a chain table assembled on the device would compare a brand against itself
+in one metro and label the result Georgia. Statewide, Taco Bell averages 97.4
+across 180 sites and Subway 93.6 across 362.
+
+**A critical-violations filter.** `parse_report()` already separates
+foodborne-illness risk factors from ordinary violations, but it ran on demand,
+one report at a time, so "which places near me have had a critical violation"
+was unanswerable. The crawler now fetches the newest report per place and keeps
+two integers — how many violations, and how many were risk factors. ~36,000
+reports is four hours in one sitting, so `--reports N` caps it per run and it
+fills in over a few weeks; after that only new inspections cost anything. The
+filter says how much is known so far, because an empty result must not be
+mistaken for a clean bill of health.
+
+**Push alerts** are written and tested and switched off: `scripts/enable_alerts.sh`
+does the provisioning in one command. Until then, Save only filters.
+
 ## Reading the scores fairly
 
 A score is one inspector's snapshot of one visit, not a running verdict — a 71
