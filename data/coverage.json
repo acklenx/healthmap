@@ -32,7 +32,7 @@
   "Clay": 13,
   "Clayton": 912,
   "Clinch": 25,
-  "Cobb": 2348,
+  "Cobb": 2354,
   "Coffee": 189,
   "Colquitt": 166,
   "Columbia": 478,
@@ -59,7 +59,7 @@
   "Floyd": 373,
   "Forsyth": 549,
   "Franklin": 109,
-  "Fulton": 6284,
+  "Fulton": 6298,
   "Gilmer": 128,
   "Glascock": 6,
   "Glynn": 545,
@@ -159,5 +159,5 @@
   "Wilkinson": 11,
   "Worth": 70
  },
- "generated": "2026-10-20T14:02:46+00:00"
+ "generated": "2026-10-27T15:01:55+00:00"
 }
