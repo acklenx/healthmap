@@ -39,22 +39,36 @@ failures = []
 checks = [0]
 
 
-def git(*args):
+def git(*args, allow_fail=False):
     out = subprocess.run(["git", "-C", ROOT, *args], capture_output=True, text=True)
     if out.returncode != 0:
+        if allow_fail:
+            return None
         raise SystemExit("git %s failed:\n%s" % (" ".join(args), out.stderr.strip()))
     return out.stdout
 
 
+def commits_to_check():
+    """Everything after the baseline -- or everything there is, if less.
+
+    A shallow checkout has no baseline to count from (CI's default clone is
+    one commit deep, which is how this first failed). Rather than erroring
+    out on something that is not the repository's fault, check whatever
+    history is actually present and say which it was.
+    """
+    if git("cat-file", "-e", "%s^{commit}" % BASELINE, allow_fail=True) is not None:
+        return git("rev-list", "%s..HEAD" % BASELINE).split(), "after %s" % BASELINE
+
+    shas = git("rev-list", "HEAD").split()
+    return shas, ("all %d in this checkout — %s is not in it, so this is a "
+                  "shallow clone" % (len(shas), BASELINE))
+
+
 def test_no_attribution_trailers():
     """No commit after the baseline carries an attribution trailer."""
-    if not git("cat-file", "-t", BASELINE).strip() == "commit":
-        failures.append("the baseline commit %s is not in this repository" % BASELINE)
-        return
-
-    shas = git("rev-list", "%s..HEAD" % BASELINE).split()
-    print("  checking %d commit%s after %s"
-          % (len(shas), "" if len(shas) == 1 else "s", BASELINE))
+    shas, scope = commits_to_check()
+    print("  checking %d commit%s (%s)"
+          % (len(shas), "" if len(shas) == 1 else "s", scope))
 
     for sha in shas:
         checks[0] += 1
