@@ -187,6 +187,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  /* Every other API route is a question about right now, so none of them are
+   * cached here at all -- the browser's own cache and the Cache-Control each
+   * route sets are the whole policy.
+   *
+   * Falling through to the app-shell handler at the bottom was worse than
+   * caching them: that handler matches with `ignoreSearch`, so the first
+   * /api/geocode?q=<address> answer was being served for every address looked
+   * up after it. One typed address, then a ZIP code, and the ZIP resolved to
+   * wherever the first lookup landed. /api/place would have done the same
+   * thing with whichever restaurant was opened first. */
+  if (url.pathname.startsWith("/api/")) return;
+
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).catch(() => caches.match("/index.html", { ignoreSearch: true }))
