@@ -65,6 +65,7 @@ cost nothing.
 | `counties.json` | 0.2 KB (three counties; ~5 KB statewide) |
 | `places/<county>.json` | Cherokee 26 KB · Cobb 88 KB · Fulton 241 KB |
 | `history/<zip>.json` | 3.1 KB median, 13.7 KB largest |
+| `locations.json` | 13 KB (660 ZIPs and 564 cities; see below) |
 
 Standing in Woodstock that is a 26 KB first paint instead of 620 KB.
 
@@ -83,6 +84,7 @@ a *past* inspection never changes at all. The caching is aggressive to match:
 | `version.json` | never cached, checked at most every 6h | a few bytes; the freshness probe |
 | `/api/report` | `max-age=1y, immutable`, edge + service worker | a completed inspection is a historical fact |
 | `/api/place` | `max-age=1h`, edge only | a claim about *now*, not about the past |
+| `locations.json?v=<stamp>` | cached forever by the service worker | same stamp, same rule as the shards |
 | `*?cache-id=<hash>` | `immutable`, a year | a stamped URL's bytes never change |
 | app shell | cache-first, refreshed in background | instant launch, works offline |
 | map tiles | cache-first, capped at 900 | a tile is a picture of a place, and places don't move |
@@ -173,6 +175,30 @@ by street address, whichever actually singles this restaurant out. Name alone
 lands on exactly one restaurant 78% of the time and address alone 76%, but
 picking the better of the two per place lands on exactly one 95% of the time;
 when neither does, the line under the link says what else is in there.
+
+### Starting from nothing
+
+The app will not download a statewide list before it knows where you are, so
+with no stored position it downloads nothing and asks. For a day that branch
+existed and was never taken — three counties is 9,000 places, under
+`WHOLE_DATASET_PLACES`, so a cold start just loaded everything. Then the crawl
+went statewide, the payload passed 20,000, and the branch started being taken
+for real.
+
+It had a hole in it. The question it asks offers two answers, and the second
+one could not work: resolving `30060` meant averaging the coordinates of the
+places in that ZIP, and the whole point of the branch is that no places have
+been loaded. So the front door's own suggestion replied **"Still loading
+restaurants — try again in a moment"**, forever. The Census geocoder is no help
+either; it resolves street addresses and returns nothing at all for a bare ZIP
+or a city name. Anyone whose browser already held a position never saw any of
+it, which is how it survived two months in production.
+
+So the crawler publishes `locations.json`: 660 ZIP codes and 564 city names
+with a centroid and a count each, 13 KB gzipped, fetched only when somebody
+actually types a location. `test_data.py` asserts the relationship that was
+missing rather than the file — above the threshold the index must exist, and
+it must cover every ZIP and city the list can show.
 
 ### Locating things
 
@@ -399,28 +425,63 @@ web/public/          the app itself
 web/public/vendor/   Leaflet 1.9.4, vendored (no CDN, no build step)
 web/functions/api/   Cloudflare Pages Functions
 scripts/             dev server, icon generation, VAPID keygen
-tests/               the parser tests and their fixtures
+tests/               the test suites and their fixtures
 ```
 
-### Testing the parsers
-
-The source's markup is the only contract this project has with it, and **two
-parsers read it**: `crawler/source.py` nightly in GitHub Actions, and
-`web/functions/api/*.js` at the edge in a Cloudflare worker. Neither can call
-the other, so they can quietly disagree — the crawl keeps publishing, the
-endpoints keep answering, and only the numbers differ.
+### Tests
 
 ```bash
-python3 tests/test_parsers.py        # runs in CI; no dependencies
-python3 scripts/make_fixtures.py     # refetch the fixtures when the site changes
+python3 tests/run.py            # everything
+python3 tests/run.py --quick    # everything but the browser — what CI runs
 ```
 
-Six real pages are parsed by both, and must match field for field. They are
-stored with their `<script>` bodies replaced by a decoy shaped like the markup
-each parser hunts for — a three-cell violation row, an establishment inspected
-in 2099 — because the page's 98 KB of inline JavaScript is a date picker that
-writes markup with `document.write()`. That decoy is what caught `parse_listing`
-reading script content, which it had done since it was written.
+No framework. The crawler is stdlib-only Python and the app is a static file,
+so a runner that needed installing would be the heaviest dependency here. Each
+suite is a program that prints what it checked and exits non-zero if something
+is wrong.
+
+| | |
+|---|---|
+| `test_repo.py` | commit messages carry no attribution trailers |
+| `test_data.py` | the published files agree with each other, and with what the app can do with them |
+| `test_parsers.py` | the Python and JavaScript parsers read the same pages the same way |
+| `test_endpoints.mjs` | the Pages Functions, with `caches` and `fetch` stubbed |
+| `test_sw.mjs` | what the service worker caches, and what it must not |
+| `test_browser.mjs` | the app in a real browser; skips when there isn't one |
+
+**Every check exists because something was broken.** The suites are organised
+by what can go wrong rather than by file:
+
+*Two parsers read the same third-party markup* — `crawler/source.py` nightly in
+GitHub Actions and `web/functions/api/*.js` at the edge — and neither can call
+the other, so they can quietly disagree while both keep working. Seven real
+pages are parsed by both and must match field for field.
+`scripts/make_fixtures.py` refetches them when the site changes, storing each
+with its `<script>` bodies replaced by a decoy shaped like the markup the
+parsers hunt for: a three-cell violation row, an establishment inspected in
+2099. That decoy is what caught `parse_listing` reading script content, which
+it had done since it was written.
+
+*The endpoints are asked about things that do not exist* — all 159 counties
+(a stale three-county check had been answering "bad request" for the other
+156), junk counties, malformed dates, pages that report rows and parse into
+nothing, names shared by two hundred Subways, establishments straddling a page
+boundary, and an upstream that is simply down. The tests assert how many times
+each case reaches the health department, which is the number that matters.
+
+*The service worker caches the wrong thing* — its last-resort handler matches
+with `ignoreSearch`, so for a while the first `/api/geocode?q=…` answer was
+served for every address looked up afterwards. Most of those checks assert
+where a request does **not** go.
+
+*The data outgrows the app* — the file-level checks were all passing on 28
+August when the crawl went statewide, the payload crossed
+`WHOLE_DATASET_PLACES`, and the app started refusing to load anything until
+told where it was. Its only escape hatch, typing a ZIP code, needed the places
+it had deliberately not loaded, so the front door answered "still loading
+restaurants" for two months. `test_data.py` now asserts the relationship:
+above that threshold, the cold-start index has to exist and has to cover every
+ZIP and city in the list.
 
 ## Deploying to Cloudflare
 

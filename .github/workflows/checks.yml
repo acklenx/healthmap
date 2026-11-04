@@ -35,13 +35,6 @@ jobs:
       - name: Every Georgia county fits the coordinate bounds
         run: python3 scripts/preflight.py --counties all --offline
 
-      # Two parsers read the same third-party HTML -- one in Python for the
-      # nightly crawl, one in JavaScript at the edge -- and nothing else
-      # would notice them drifting apart. Fixtures are real pages, committed,
-      # so this needs no network and no dependencies.
-      - name: Both parsers agree about the same pages
-        run: python3 tests/test_parsers.py
-
       - name: JavaScript parses
         run: |
           for f in web/public/app.js web/public/sw.js web/public/qr.js; do
@@ -51,3 +44,10 @@ jobs:
             node --check "$f" || exit 1
           done
           echo "All JavaScript parses."
+
+      # Everything but the browser suite, which skips itself here anyway.
+      # No dependencies: the fixtures are committed real pages, the endpoint
+      # and service-worker tests stub the edge, and the rest reads the files
+      # already in the repository.
+      - name: Tests
+        run: python3 tests/run.py --quick

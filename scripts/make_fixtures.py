@@ -76,6 +76,14 @@ FIXTURES = [
     # failing to find the table.
     ("report-clean.html",
      dict(kind="report", county="Cobb", eid=3163712, insp=57535027)),
+    # A report the state has not published. The score reaches its inspection
+    # list before the findings do, so this is the usual state of a brand-new
+    # inspection -- and it comes back as the establishment header and nothing
+    # else: no date, no grade, no form link, no rows. Indistinguishable from a
+    # clean inspection if you only count violations, which is exactly the
+    # mistake the sheet used to make.
+    ("report-unpublished.html",
+     dict(kind="report", county="Cobb", eid=3163712, insp=999000111)),
 ]
 
 
