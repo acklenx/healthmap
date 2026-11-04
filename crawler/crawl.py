@@ -335,6 +335,40 @@ def build_payload(store, chains=None):
     return places
 
 
+def build_locations(places):
+    """ZIP and city centroids, on their own, without the places under them.
+
+    The statewide payload is far too big to download before knowing where
+    somebody is, so the app loads nothing until it is told -- which left it
+    unable to answer the one question it asks on a cold start. Resolving
+    "30060" meant averaging the coordinates of the places in that ZIP, and
+    there were none, so the front door's own suggestion ("enter a ZIP code")
+    answered "still loading restaurants" forever. The Census geocoder is no
+    help: it resolves street addresses and returns nothing at all for a bare
+    ZIP or a city name.
+
+    So the centroids ship separately -- 660 ZIPs and 564 city names, ~13 KB
+    gzipped -- and are fetched only when somebody actually types a location.
+    Four decimals is about 11 metres, which is absurd precision for the middle
+    of a ZIP code and still smaller than the count beside it.
+    """
+    def centroids(key):
+        buckets = {}
+        for p in places:
+            k = key(p)
+            if not k:
+                continue
+            b = buckets.setdefault(k, [0.0, 0.0, 0])
+            b[0] += p["y"]
+            b[1] += p["x"]
+            b[2] += 1
+        return {k: [round(v[0] / v[2], 4), round(v[1] / v[2], 4), v[2]]
+                for k, v in sorted(buckets.items())}
+
+    return {"z": centroids(lambda p: p["z"]),
+            "c": centroids(lambda p: (p["c"] or "").lower())}
+
+
 def build_shards(places):
     """Group the payload by county, and describe each group in a manifest.
 
@@ -651,6 +685,12 @@ def main():
          # missing as well as what is here.
          "all_counties": len(GEORGIA),
          "counties": manifest},
+        compact=True,
+    )
+    # Enough to answer "where is 30060?" before a single place is downloaded.
+    save_json(
+        os.path.join(WEB_PUBLIC, "locations.json"),
+        {"generated": generated, **build_locations(places)},
         compact=True,
     )
     save_json(

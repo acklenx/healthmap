@@ -22,7 +22,7 @@
  * answer -- and /api/report is the single exception, above.
  */
 
-const SHELL_VERSION = "fd7a90fb";
+const SHELL_VERSION = "4badc198";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const HISTORY = "history-v1";
@@ -35,12 +35,12 @@ const TILE_LIMIT = 900;      // roughly a couple of towns' worth, at a few kB ea
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?cache-id=fd7a90fb",
-  "/app.js?cache-id=fd7a90fb",
+  "/styles.css?cache-id=4badc198",
+  "/app.js?cache-id=4badc198",
   // Loaded on demand when something is shared, precached for the same reason
   // Leaflet is: the moment you want it is not a good moment to need the network.
-  "/qr.js?cache-id=fd7a90fb",
-  "/manifest.webmanifest?cache-id=fd7a90fb",
+  "/qr.js?cache-id=4badc198",
+  "/manifest.webmanifest?cache-id=4badc198",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least
   // likely to have signal to spare.
@@ -172,7 +172,7 @@ self.addEventListener("fetch", (event) => {
   // week's stamp.
   if (url.pathname === "/counties.json" || url.pathname.startsWith("/places/") ||
       url.pathname === "/chains.json" || url.pathname === "/trend.json" ||
-      url.pathname === "/changes.json") {
+      url.pathname === "/locations.json" || url.pathname === "/changes.json") {
     event.respondWith(immutable(request, DATA, { pruneStale: url.searchParams.get("v") }));
     return;
   }

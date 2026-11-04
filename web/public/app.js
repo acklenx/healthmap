@@ -40,7 +40,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "fd7a90fb", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "4badc198", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -865,18 +865,72 @@ function buildIndex() {
     const b = map.get(key);
     return b ? { lat: b[0] / b[2], lon: b[1] / b[2], count: b[2] } : null;
   };
-  // ZIPs are allocated geographically, so numeric closeness is a decent proxy
-  // for "the nearest ZIP we actually cover" — good enough for a suggestion.
-  const known = [...zips.keys()].sort();
-  const nearestZip = (zip) => {
-    if (!known.length) return null;
-    const target = Number(zip);
-    return known.reduce((best, z) =>
-      Math.abs(Number(z) - target) < Math.abs(Number(best) - target) ? z : best
-    );
+  placeIndex = {
+    zip: centroid(zips),
+    city: centroid(cities),
+    nearestZip: (zip) => nearestZipIn([...zips.keys()], zip),
   };
-  placeIndex = { zip: centroid(zips), city: centroid(cities), nearestZip };
   return placeIndex;
+}
+
+/** ZIPs are allocated geographically, so numeric closeness is a decent proxy
+ *  for "the nearest ZIP we actually cover" — good enough for a suggestion. */
+function nearestZipIn(known, zip) {
+  if (!known.length) return null;
+  const target = Number(zip);
+  return known.reduce((best, z) =>
+    Math.abs(Number(z) - target) < Math.abs(Number(best) - target) ? z : best
+  );
+}
+
+/* Where ZIPs and cities are, before a single place has been downloaded.
+ *
+ * The statewide payload is too big to fetch blind, so with no position the app
+ * loads nothing and asks where you are -- and then could not accept the answer.
+ * Resolving "30060" meant averaging the coordinates of the places in that ZIP,
+ * of which there were none, so the front door's own suggestion ("enter a ZIP
+ * code") replied "still loading restaurants" and never stopped. Nothing in the
+ * code changed to cause it: the crawl went statewide on 28 August, the payload
+ * crossed WHOLE_DATASET_PLACES, and the branch that had always been there
+ * started being taken. Anyone whose browser already held a position never saw
+ * it, which is why it survived two months.
+ *
+ * The Census geocoder cannot stand in: it resolves street addresses and
+ * answers nothing at all for a bare ZIP or a city name. So the crawler
+ * publishes the centroids on their own -- 660 ZIPs and 564 cities, ~13 KB
+ * gzipped -- and they are fetched only when somebody actually types one.
+ */
+let coldIndex = null;
+
+function loadColdIndex() {
+  coldIndex ||= fetch(`/locations.json?v=${encodeURIComponent(state.generated)}`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`locations: ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      const centroid = (group) => (key) => {
+        const row = group?.[key];
+        return row ? { lat: row[0], lon: row[1], count: row[2] } : null;
+      };
+      return {
+        zip: centroid(data.z),
+        city: centroid(data.c),
+        nearestZip: (zip) => nearestZipIn(Object.keys(data.z || {}), zip),
+      };
+    })
+    .catch((err) => {
+      coldIndex = null;              // let the next attempt try again
+      throw err;
+    });
+  return coldIndex;
+}
+
+/** The places in memory when there are any, and the published centroids when
+ *  there are not. Both answer the same three questions. */
+async function locationIndex() {
+  if (state.places.length) return buildIndex();
+  return loadColdIndex();
 }
 
 /** Returns {lat, lon, label} on success, or {error} explaining what went wrong.
@@ -886,25 +940,29 @@ async function resolveLocation(text) {
   const query = text.trim();
   if (!query) return { error: "Enter a ZIP code, city, or address." };
 
-  if (!state.places.length) {
-    return { error: "Still loading restaurants — try again in a moment." };
+  let index;
+  try {
+    index = await locationIndex();
+  } catch {
+    return {
+      error: "Couldn't look that up — it needs a connection the first time. " +
+             "Once the list has loaded, ZIP codes work offline.",
+    };
   }
-
-  const index = buildIndex();
   const bare = query.replace(/,?\s*(ga|georgia)\s*$/i, "").trim();
 
   const zip = bare.match(/^(\d{5})(?:-\d{4})?$/);
   if (zip) {
     const hit = index.zip(zip[1]);
     if (hit) return { ...hit, label: zip[1] };
-    // A well-formed ZIP we have no restaurants in is almost always a ZIP
-    // outside the three counties, not a typo. Say so, and suggest the nearest
-    // covered ZIP rather than dead-ending.
+    // The dataset is every county in Georgia now, so a ZIP with nothing in it
+    // is a ZIP the state files no food-service inspections under -- a PO box,
+    // or somewhere nobody serves food -- rather than somewhere out of scope.
+    // Suggest the nearest ZIP we do have rather than dead-ending.
     const near = index.nearestZip(zip[1]);
     return {
-      error:
-        `No inspections on file for ${zip[1]} — it's likely outside Cobb, ` +
-        `Cherokee and Fulton.` + (near ? ` Try ${near} instead.` : ""),
+      error: `No inspections on file for ${zip[1]}.` +
+             (near ? ` Try ${near} instead.` : ""),
     };
   }
 
