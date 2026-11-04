@@ -40,7 +40,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "cc1dc0ba", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "fd7a90fb", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -2760,9 +2760,12 @@ function historySectionHTML(p) {
       <p class="history-note" role="status">Loading ${n} ${n === 1 ? "visit" : "visits"}…</p>`;
   }
   if (p.history === "error") {
+    // The one state where the link out matters most: the app cannot show the
+    // history, and the source can.
     return `${head}
       <p class="history-note">Couldn't load the inspection history. It needs a
-      connection the first time; the latest score above is already correct.</p>`;
+      connection the first time; the latest score above is already correct.</p>
+      ${stateSiteHTML(p)}`;
   }
 
   const rows = p.history.map((h, i) => {

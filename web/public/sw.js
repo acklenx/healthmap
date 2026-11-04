@@ -22,7 +22,7 @@
  * answer -- and /api/report is the single exception, above.
  */
 
-const SHELL_VERSION = "cc1dc0ba";
+const SHELL_VERSION = "fd7a90fb";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const HISTORY = "history-v1";
@@ -35,12 +35,12 @@ const TILE_LIMIT = 900;      // roughly a couple of towns' worth, at a few kB ea
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?cache-id=cc1dc0ba",
-  "/app.js?cache-id=cc1dc0ba",
+  "/styles.css?cache-id=fd7a90fb",
+  "/app.js?cache-id=fd7a90fb",
   // Loaded on demand when something is shared, precached for the same reason
   // Leaflet is: the moment you want it is not a good moment to need the network.
-  "/qr.js?cache-id=cc1dc0ba",
-  "/manifest.webmanifest?cache-id=cc1dc0ba",
+  "/qr.js?cache-id=fd7a90fb",
+  "/manifest.webmanifest?cache-id=fd7a90fb",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least
   // likely to have signal to spare.
