@@ -40,7 +40,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "6bbe7ad2", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "cc1dc0ba", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -714,6 +714,7 @@ function checkPlace(p, { manual = false } = {}) {
       p.failedAt = null;
       const added = recordCheck(p, data);
       p.checkState = data.partial ? "partial" : "checked";
+      p.checkReason = data.reason || null;
       if (added) {
         // A new score changes the badge, the trend arrow, the chart and where
         // the row sorts, so this is not a sheet-only update.
@@ -2852,13 +2853,18 @@ function liveNote(p) {
 function troubleWith(p) {
   switch (p.checkState) {
     case "partial":
-      // Nothing can be claimed here in either direction: the search is by
-      // name, and a name shared by two hundred Subways does not single one
-      // out. Say which it is rather than implying a clean "nothing new".
+      // Nothing can be claimed here in either direction, so the note says so
+      // rather than implying a clean "nothing new". Two ways to get here: a
+      // name shared by two hundred Subways, or a page this app could not
+      // read -- which is somebody else's markup having moved, and is worth
+      // saying out loud rather than dressing up as the first one.
       return {
-        html: `The state's search couldn't pick this restaurant out — too many places there
-          share its name, so this is the nightly refresh's word for it.
-          ${stateSiteLink(p, "Look it up there")}`,
+        html: (p.checkReason === "unreadable"
+          ? `The state's site answered with something this app couldn't read`
+          : `The state's search couldn't pick this restaurant out — too many places there
+             share its name`) +
+          `, so this is the nightly refresh's word for it.
+           ${stateSiteLink(p, "Look it up there")}`,
       };
     case "error":
       return { html: "The state's site couldn't be reached, so this is the nightly refresh." };

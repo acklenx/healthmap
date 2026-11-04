@@ -122,7 +122,7 @@ class Handler(SimpleHTTPRequestHandler):
         start = min(max(start, date.today() - timedelta(days=1095)), date.today())
 
         answer = {"id": int(eid), "county": county, "since": start.isoformat()}
-        seen, listed_as, rows, pages, hit = {}, None, 0, 0, False
+        seen, listed_as, rows, pages, hit, read = {}, None, 0, 0, False, 0
         until = date.today() + timedelta(days=1)
         try:
             page = source.fetch(source.search_url(
@@ -135,6 +135,7 @@ class Handler(SimpleHTTPRequestHandler):
                         county, start=(n - 1) * PLACE_PAGE_SIZE + 1,
                         since=start, until=until, name=name))
                 blocks = source.parse_listing(page, county)
+                read += len(blocks)
                 mine = [b for b in blocks if b["id"] == int(eid)]
                 for block in mine:
                     hit = True
@@ -152,14 +153,21 @@ class Handler(SimpleHTTPRequestHandler):
         except source.FetchError as exc:
             return self._json({"error": "upstream: %s" % exc}, 502)
 
+        # Unsure either because this place was not on any page we read, or
+        # because the page claimed rows and we parsed none of them -- which
+        # is the markup having moved. Mirrors place.js.
+        unreadable = bool(rows) and not read
+        crowded = not hit and pages > PLACE_MAX_PAGES
         answer.update({
             "checked": datetime.now(timezone.utc).isoformat(),
             "rows": rows,
             "pages": pages,
-            "partial": not hit and pages > PLACE_MAX_PAGES,
+            "partial": unreadable or crowded,
             "found": hit,
             "inspections": sorted(seen.values(), key=lambda i: i["date"], reverse=True),
         })
+        if unreadable or crowded:
+            answer["reason"] = "unreadable" if unreadable else "crowded"
         if listed_as:
             answer["listedAs"] = listed_as
         return self._json(answer, cache="public, max-age=3600")

@@ -125,6 +125,7 @@ async function lookup({ id, county, name, start, today }) {
   const seen = new Map();          // inspection id -> inspection
   let listedAs = null;
   let hit = false;
+  let read = 0;                    // establishments understood, across pages
   let page = first;
 
   for (let n = 1; n <= limit; n++) {
@@ -132,6 +133,7 @@ async function lookup({ id, county, name, start, today }) {
       page = await fetchPage({ county, name, start, until, offset: (n - 1) * PAGE_SIZE + 1 });
     }
     const blocks = parseListing(page);
+    read += blocks.length;
     const mine = blocks.filter((b) => b.id === id);
     for (const block of mine) {
       hit = true;
@@ -146,12 +148,24 @@ async function lookup({ id, county, name, start, today }) {
   }
 
   const inspections = [...seen.values()].sort((a, b) => b.date.localeCompare(a.date));
+
+  /* Unsure, rather than "nothing new", in two different ways.
+   *
+   * Either this establishment was not on any page we were willing to read --
+   * a name shared by two hundred Subways, where the caller cannot tell "not
+   * inspected" from "not found" -- or the page said it had rows and we
+   * understood none of them, which is this parser having been outlived by
+   * somebody else's markup. They are told apart because they are worth
+   * saying differently, and because a silent "nothing new", forever, is
+   * exactly what a broken scraper looks like from the outside. */
+  const unreadable = read === 0;
+  const crowded = !hit && pages > limit;
+
   return {
     rows,
     pages,
-    // We looked at everything we were willing to and never saw it. The caller
-    // cannot tell "not inspected" from "not found" in that case, so say so.
-    partial: !hit && pages > limit,
+    partial: unreadable || crowded,
+    ...(unreadable || crowded ? { reason: unreadable ? "unreadable" : "crowded" } : {}),
     found: hit,
     ...(listedAs ? { listedAs } : {}),
     inspections,
