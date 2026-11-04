@@ -19,6 +19,20 @@
  */
 
 const CHECK_INTERVAL = 6 * 60 * 60 * 1000;   // how often to look for new data
+/* How stale one restaurant may be before opening it asks the source directly.
+ *
+ * The dataset is a nightly snapshot, so a day is the resolution it has. Less
+ * than that and every open would be asking a health department a question its
+ * own site answers the same way; much more and "I looked it up and it was
+ * fine" could be a week old on a page that looks current. */
+const FRESH_INTERVAL = 24 * 60 * 60 * 1000;
+// How long an inspection found ahead of the payload is kept, and how many.
+// The nightly crawl catches up within a day; this is the margin for it
+// failing for a while, and it bounds what the app is holding on its own.
+const LIVE_KEEP = 30 * 24 * 60 * 60 * 1000;
+const LIVE_MAX = 300;
+// How long one restaurant waits after a check failed before trying again.
+const FAIL_BACKOFF = 5 * 60 * 1000;
 const POSITION_MAX_AGE = 10 * 60 * 1000;     // reuse a fix this fresh, silently
 const PAGE = 40;                              // rows appended per scroll batch
 const MAX_PINS = 280;                         // pins drawn at once (see syncPins)
@@ -39,6 +53,8 @@ const KEY = {
   pos: "score.lastPosition",
   favs: "score.favorites",
   ghBackoff: "score.ghBackoff",
+  // What the live check found, and when each place was last checked.
+  live: "score.live",
 };
 
 const GRADE_BANDS = [
@@ -118,6 +134,11 @@ const state = {
   shown: PAGE,
   view: [],
   favorites: new Set(readJSON(KEY.favs, [])),
+  // Inspections this device found by asking the source, keyed by place id:
+  // { at: <checked, ms>, add: [[date, score, inspId], ...] }. Survives a
+  // reload, because a restaurant that was just inspected should not go back
+  // to looking stale when the app is reopened.
+  live: readJSON(KEY.live, {}) || {},
   open: null,
   pane: "list",      // which pane a phone is showing; both are shown from 980px
 };
@@ -394,15 +415,31 @@ async function ingestCounty(county, stamp) {
       // Full history arrives with the ZIP's shard, on demand. The list only
       // ever needed the latest score -- for the badge, and to sort by -- and
       // carrying the rest was half the wire size of the payload.
+      history0: null,
       history: null,
-      historyCount: p.hn,
-      previous: p.pv ?? null,
-      risk: p.rf ?? null,
       chain: p.ck || null,
       // Precomputed once so filtering/searching stays cheap across ~13k rows.
       search: `${p.n} ${p.a} ${p.c}`.toLowerCase(),
+      /* Two sets of the same four facts: what the nightly payload published,
+       * and what the app is showing.
+       *
+       * They are the same until this restaurant is checked against the source
+       * and comes back with an inspection the payload has not got yet. Keeping
+       * the published values untouched is what lets that merge be recomputed
+       * from scratch every time -- when the history shard lands, when another
+       * check runs, when tomorrow's payload finally includes it -- instead of
+       * being applied once and then needing to be undone. See applyLive(). */
+      latest0: p.l ? { date: p.l[0], score: p.l[1], inspId: p.l[2] } : null,
+      previous0: p.pv ?? null,
+      historyCount0: p.hn,
+      risk0: p.rf ?? null,
       latest: p.l ? { date: p.l[0], score: p.l[1], inspId: p.l[2] } : null,
+      previous: p.pv ?? null,
+      historyCount: p.hn,
+      risk: p.rf ?? null,
+      liveIds: null,
     });
+    if (state.live[p.i]) applyLive(state.places[state.places.length - 1]);
   }
   syncCoverage();
 }
@@ -537,10 +574,13 @@ function loadHistoryShard(zip) {
     .then((entries) => {
       // Fill in every place in the shard, not just the one that was asked for.
       for (const place of state.places) {
-        if (place.zip !== zip || place.history) continue;
+        if (place.zip !== zip || place.history0) continue;
         const rows = entries[String(place.id)];
         if (rows) {
-          place.history = rows.map(([date, score, inspId]) => ({ date, score, inspId }));
+          place.history0 = rows.map(([date, score, inspId]) => ({ date, score, inspId }));
+          place.history = place.history0;
+          // An inspection found live goes back on top of the published list.
+          applyLive(place);
         }
       }
       return entries;
@@ -554,6 +594,176 @@ function loadHistoryShard(zip) {
   return pending;
 }
 
+
+/* ----------------------------------------------------------- freshness --- */
+/* Asking the source about one restaurant.
+ *
+ * Everything above this line is a nightly snapshot. That is the right shape
+ * for a list of thirty-five thousand places -- but not for the one place
+ * somebody is standing outside, reading a grade, deciding whether to go in. A
+ * score published this morning is a day old by dinner, and after a failed
+ * crawl it is older than that, with nothing on screen to say so.
+ *
+ * So opening a restaurant checks that restaurant: /api/place asks the state's
+ * own search whether anything has been inspected since the inspection we are
+ * showing. Once a day per restaurant, because the dataset's resolution is a
+ * day; on demand when somebody asks again, because sometimes you know.
+ *
+ * What comes back is held separately from the payload rather than merged into
+ * it -- see the `0`-suffixed fields in ingestCounty. Everything the app shows
+ * is recomputed from published + found, every time, so the found rows quietly
+ * stop existing the night the crawl catches up with them.
+ */
+
+const liveChecks = new Map();      // place id -> the check in flight for it
+
+/** Milliseconds since this place was last asked about; Infinity if never. */
+const liveAge = (p) =>
+  state.live[p.id]?.at ? Date.now() - state.live[p.id].at : Infinity;
+
+/** Opening a place checks it, unless it was checked recently. */
+function dueForCheck(p) {
+  // Offline, the answer would be "couldn't reach it", which is a worse thing
+  // to say than nothing: the scores on screen are real and they came from the
+  // cache. Say nothing, and check when there is a connection to check with.
+  if (!navigator.onLine || !p.latest0) return false;
+  // A failed attempt is not a check -- it does not reset the daily clock --
+  // but it does hold this place off for a few minutes. Browsing twenty
+  // restaurants while the endpoint is down should not be twenty requests, and
+  // then twenty more on the way back down the list.
+  if (p.failedAt && Date.now() - p.failedAt < FAIL_BACKOFF) return false;
+  return liveAge(p) > FRESH_INTERVAL;
+}
+
+/** Fold what this device has found into what the payload published. */
+function applyLive(p) {
+  const rows = state.live[p.id]?.add || [];
+  // Only rows still ahead of the payload count. The rest have been published
+  // since -- the shard has them now, or a new generation does -- so dropping
+  // them here is the whole of catching up: nothing has to be unwound.
+  const extra = rows
+    .filter((row) => !p.latest0 || row[0] > p.latest0.date)
+    .map(([date, score, inspId]) => ({ date, score, inspId }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  p.liveIds = extra.length ? new Set(extra.map((h) => h.inspId)) : null;
+  p.historyCount = p.historyCount0 + extra.length;
+  p.latest = extra[0] || p.latest0;
+  p.previous = extra.length ? (extra[1]?.score ?? p.latest0?.score ?? null) : p.previous0;
+  // The risk-factor count describes the published inspection. With a newer
+  // one on top, nobody has counted its violations yet -- and that is
+  // "unknown", not "none", which is how the risk filter reads a null.
+  p.risk = extra.length ? null : p.risk0;
+  if (Array.isArray(p.history0)) {
+    p.history = extra.length ? [...extra, ...p.history0] : p.history0;
+  }
+}
+
+/* Keep the store small and keep it honest.
+ *
+ * An entry is a timestamp plus whatever is ahead of the payload, and both
+ * stop being interesting quickly: the crawl normally catches up overnight, so
+ * a month-old entry means either a long outage -- in which case the freshness
+ * line is already saying the dataset is stale -- or a restaurant nobody has
+ * opened since. Either way it is not worth carrying forever. */
+function pruneLive() {
+  const cutoff = Date.now() - LIVE_KEEP;
+  for (const id of Object.keys(state.live)) {
+    if (!(state.live[id]?.at > cutoff)) delete state.live[id];
+  }
+  const left = Object.keys(state.live);
+  if (left.length > LIVE_MAX) {
+    left.sort((a, b) => state.live[b].at - state.live[a].at)
+      .slice(LIVE_MAX)
+      .forEach((id) => delete state.live[id]);
+  }
+}
+
+/** The day after an inspection: the earliest date that could be news. */
+function dayAfter(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1));
+  return next.toISOString().slice(0, 10);
+}
+
+/** Ask about one restaurant. `manual` is a human asking again. */
+function checkPlace(p, { manual = false } = {}) {
+  const inflight = liveChecks.get(p.id);
+  if (inflight) return inflight;
+  if (!p.latest0) return Promise.resolve(null);
+
+  const params = new URLSearchParams({
+    id: String(p.id),
+    county: p.county,
+    // The search matches names case-insensitively and as a substring, so the
+    // display name finds the record the ALL CAPS original came from, and a
+    // truncated one still matches -- it just matches more.
+    name: p.name.slice(0, 80),
+    since: dayAfter(p.latest.date),
+  });
+  if (manual) params.set("fresh", "1");
+
+  p.checkState = "checking";
+  syncLiveNote(p);
+
+  const job = (async () => {
+    try {
+      const res = await fetch(`/api/place?${params}`, manual ? { cache: "no-store" } : undefined);
+      if (!res.ok) throw new Error(`place: ${res.status}`);
+      const data = await res.json();
+      p.failedAt = null;
+      const added = recordCheck(p, data);
+      p.checkState = data.partial ? "partial" : "checked";
+      if (added) {
+        // A new score changes the badge, the trend arrow, the chart and where
+        // the row sorts, so this is not a sheet-only update.
+        if (state.open?.id === p.id) renderSheetBody(p);
+        render();
+      } else {
+        syncLiveNote(p);
+      }
+      return data;
+    } catch {
+      // Offline is not a failure worth a red line: the data on screen came
+      // from the cache and is exactly as good as it was a moment ago.
+      p.failedAt = Date.now();
+      p.checkState = navigator.onLine ? "error" : "offline";
+      syncLiveNote(p);
+      return null;
+    } finally {
+      liveChecks.delete(p.id);
+    }
+  })();
+
+  liveChecks.set(p.id, job);
+  return job;
+}
+
+/** Record a check, and return how many inspections it turned up. */
+function recordCheck(p, data) {
+  const entry = { at: Date.now(), add: (state.live[p.id]?.add || []).slice() };
+
+  const known = new Set(Array.isArray(p.history0) ? p.history0.map((h) => h.inspId) : []);
+  if (p.latest0) known.add(p.latest0.inspId);
+
+  let added = 0;
+  for (const h of data.inspections || []) {
+    if (!h?.inspId || known.has(h.inspId)) continue;
+    if (entry.add.some((row) => row[2] === h.inspId)) continue;
+    // Ahead of the payload only. The window can legitimately start before the
+    // latest published inspection -- the endpoint clamps a date it thinks is
+    // too old -- and adding one we already have would list it twice.
+    if (p.latest0 && h.date <= p.latest0.date) continue;
+    entry.add.push([h.date, h.score, h.inspId]);
+    added++;
+  }
+
+  state.live[p.id] = entry;
+  pruneLive();
+  writeJSON(KEY.live, state.live);
+  applyLive(p);
+  return added;
+}
 
 /* ------------------------------------------------------------ location --- */
 
@@ -2436,7 +2646,10 @@ function openSheet(id) {
   showSheetMap(p);
   syncPins();      // ring the pin behind the sheet, so closing it lands in place
 
-  if (!p.history) fetchSheetHistory(p);
+  if (!p.history0) fetchSheetHistory(p);
+  // Opening a restaurant is the one moment it is worth asking the source
+  // about this restaurant, so that is when it is asked. Once a day.
+  if (dueForCheck(p)) checkPlace(p);
   // The brand comparison needs chains.json, which is otherwise only loaded for
   // the stats sheet. Fetch it once, then redraw the sheet that asked for it.
   if (p.chain && !chainIndex) {
@@ -2536,24 +2749,32 @@ function renderSheetBody(p) {
  * to have nothing to show. The latest score is already known, so the heading
  * can be honest about how many visits are coming. */
 function historySectionHTML(p) {
+  // The heading and the freshness line are the same in every state: whether
+  // the history has arrived says nothing about whether a check is running.
+  const head = `<h3 class="sec-title">Inspections</h3>${liveNoteHTML(p)}`;
+
   if (!p.history) {
     const n = p.historyCount;
-    return `<h3 class="sec-title">Inspections</h3>
+    return `${head}
       <p class="history-note" role="status">Loading ${n} ${n === 1 ? "visit" : "visits"}…</p>`;
   }
   if (p.history === "error") {
-    return `<h3 class="sec-title">Inspections</h3>
+    return `${head}
       <p class="history-note">Couldn't load the inspection history. It needs a
       connection the first time; the latest score above is already correct.</p>`;
   }
 
   const rows = p.history.map((h, i) => {
     const g = gradeFor(h.score);
-    return `<button class="insp-row" type="button" data-insp="${h.inspId}"
+    // An inspection this device found ahead of the payload is marked as such.
+    // "Where did this come from, and why can I not see it anywhere else yet"
+    // is a fair question to have answered before the number is believed.
+    const live = p.liveIds?.has(h.inspId);
+    return `<button class="insp-row${live ? " is-live" : ""}" type="button" data-insp="${h.inspId}"
               aria-expanded="false" id="insp-${h.inspId}">
         <span class="insp-pill" data-g="${g}">${h.score}</span>
         <span class="insp-date">${formatDate(h.date)}<span class="insp-hint"> · grade ${g}</span></span>
-        <span class="insp-hint">${i === 0 ? "Latest" : "Details"}</span>
+        <span class="insp-hint">${live ? "Just found" : i === 0 ? "Latest" : "Details"}</span>
       </button><div class="detail" data-for="${h.inspId}" hidden></div>`;
   }).join("");
 
@@ -2563,13 +2784,173 @@ function historySectionHTML(p) {
     : "";
   return (chart ? `<h3 class="sec-title">Score history</h3>${chart}
               <p class="history-note">Each dot is one inspection. Tap it for that visit's findings.${capped}</p>` : "") +
-    `<h3 class="sec-title">Inspections</h3><div class="insp">${rows}</div>`;
+    head + `<div class="insp">${rows}</div>` + stateSiteHTML(p);
+}
+
+/* How current this is, and the button that makes it more so.
+ *
+ * It sits directly above the inspections rather than at the foot of the sheet
+ * because it is a caveat on the numbers below it, and a caveat you read after
+ * the thing it qualifies is decoration. Quiet in the ordinary case -- one grey
+ * line saying when this was last checked -- and loud only when there is
+ * genuinely something the published data does not have.
+ */
+function liveNoteHTML(p) {
+  const { cls, html } = liveNote(p);
+  return `<p class="live-note${cls ? " " + cls : ""}" id="live-note" role="status"${
+    html ? "" : " hidden"}>${html}</p>`;
+}
+
+function liveNote(p) {
+  const again = (label) =>
+    `<button class="linkish" type="button" data-recheck>${label}</button>`;
+
+  if (p.checkState === "checking") {
+    return { cls: "is-busy", html: "Checking the state's site for a newer inspection…" };
+  }
+
+  /* Two independent things to say, and both can be true at once: what this
+   * device has found, and how the last attempt went. They used to be a single
+   * if-chain with "found" first, so a restaurant that had turned up a new
+   * inspection yesterday and then failed to re-check today showed yesterday's
+   * good news and nothing about today -- the one combination where the page
+   * looks most current and is least sure of itself. */
+  const found = p.liveIds?.size || 0;
+  const trouble = troubleWith(p);
+
+  if (found) {
+    const newest = p.latest;
+    const news = `<b>${found === 1 ? "A newer inspection" : `${found} newer inspections`}</b>
+      than the nightly refresh: ${formatDate(newest.date)}, scored ${newest.score}. Straight
+      from the state's site, and ${found === 1 ? "it is" : "they are"} in the list below.`;
+    return {
+      cls: "is-found",
+      html: trouble ? `${news} ${trouble.html} ${again("Try again")}`
+                    : `${news} ${again("Check again")}`,
+    };
+  }
+
+  if (trouble) {
+    return { cls: trouble.quiet ? "" : "is-unsure",
+             html: trouble.quiet ? trouble.html : `${trouble.html} ${again("Try again")}` };
+  }
+
+  const at = state.live[p.id]?.at;
+  if (!at) {
+    return navigator.onLine
+      ? { cls: "", html: again("Check the state's site for a newer inspection") }
+      : { cls: "", html: "" };
+  }
+  return {
+    cls: "",
+    html: `Checked against the state's site ${relativeTime(new Date(at).toISOString())} —
+      nothing newer than ${formatDate(p.latest.date)}. ${again("Check again")}`,
+  };
+}
+
+/** How the last attempt went, when it did not simply work. */
+function troubleWith(p) {
+  switch (p.checkState) {
+    case "partial":
+      // Nothing can be claimed here in either direction: the search is by
+      // name, and a name shared by two hundred Subways does not single one
+      // out. Say which it is rather than implying a clean "nothing new".
+      return {
+        html: `The state's search couldn't pick this restaurant out — too many places there
+          share its name, so this is the nightly refresh's word for it.
+          ${stateSiteLink(p, "Look it up there")}`,
+      };
+    case "error":
+      return { html: "The state's site couldn't be reached, so this is the nightly refresh." };
+    case "offline":
+      return { quiet: true, html: "Offline, so this could not be checked against the state's site." };
+    default:
+      return null;
+  }
+}
+
+/* A link to every inspection the state lists for this restaurant.
+ *
+ * Asked for, and worth having: the per-inspection link goes to one visit's
+ * official form, and there was no way to get from the app to the source's own
+ * record of the place as a whole.
+ *
+ * The site has no per-establishment page -- its search is the only way in --
+ * so which field that search uses is chosen per restaurant. Searching the
+ * name lands on exactly one restaurant 78% of the time and the street address
+ * 76%, but picking whichever is better for this particular place lands on
+ * exactly one 95% of the time: "SUBWAY" needs the address, a unit inside a
+ * food court needs the name. When neither is unique the link still works, and
+ * the note under it says what else is in there rather than letting somebody
+ * read the wrong restaurant's inspections.
+ */
+const DPH_SEARCH = "https://ga.healthinspections.us/georgia/search.cfm";
+
+function stateSiteTarget(p) {
+  if (p.stateSite) return p.stateSite;
+
+  const name = p.name.toLowerCase();
+  const street = p.street.toLowerCase();
+  let byName = 0;
+  let byStreet = 0;
+  for (const other of state.places) {
+    if (other.county !== p.county) continue;
+    if (other.name.toLowerCase().includes(name)) byName++;
+    if (other.street.toLowerCase().includes(street)) byStreet++;
+  }
+
+  const useName = byName <= byStreet;
+  const params = new URLSearchParams({
+    1: "1",
+    f: "s",
+    r: useName ? "name" : "address",
+    s: useName ? p.name : p.street,
+    inspectionType: "Food",
+    // The whole record, not a window. The form's hidden date fields are
+    // ignored when useDate is NO, so they are not sent.
+    useDate: "NO",
+    county: p.county,
+  });
+
+  p.stateSite = {
+    url: `${DPH_SEARCH}?${params}`,
+    field: useName ? "name" : "address",
+    others: (useName ? byName : byStreet) - 1,
+  };
+  return p.stateSite;
+}
+
+function stateSiteLink(p, label) {
+  return `<a class="form-link state-link" href="${escapeHTML(stateSiteTarget(p).url)}"
+     target="_blank" rel="noopener">${label} ↗</a>`;
+}
+
+/** The link, plus what else the search it opens will have in it. */
+function stateSiteHTML(p) {
+  const { field, others } = stateSiteTarget(p);
+  const caveat = others
+    ? `<p class="history-note">The state has no page for a single restaurant, so that is
+       a search of its records by ${field}, and ${others === 1 ? "one other place shares"
+        : `${others} other places share`} this one's ${field}.</p>`
+    : "";
+  return stateSiteLink(p, "Every inspection on the state's site") + caveat;
+}
+
+/** Repaint just the freshness line, so an open report stays open. */
+function syncLiveNote(p) {
+  if (state.open?.id !== p.id) return;
+  const node = el.sheetBody.querySelector("#live-note");
+  if (node) node.outerHTML = liveNoteHTML(p);
+  else renderSheetBody(p);
 }
 
 async function fetchSheetHistory(p) {
   try {
     await loadHistoryShard(p.zip);
-    if (!p.history) p.history = [];        // in the shard's ZIP but not its body
+    if (!p.history0) {                     // in the shard's ZIP but not its body
+      p.history0 = [];
+      applyLive(p);
+    }
   } catch {
     p.history = "error";
   }
@@ -2627,6 +3008,19 @@ async function loadReport(place, inspId) {
 
 function reportHTML(report) {
   const violations = report.violations || [];
+  /* A visit whose findings are not up yet comes back as the establishment's
+   * name and nothing else: no date, no grade, no link to the form. That is
+   * not the same thing as an inspection with nothing on it, and "no
+   * violations recorded on this visit" is the one claim this panel must not
+   * make about a visit nobody has published the findings for.
+   *
+   * It is also not rare where it matters: the score lands on the state's
+   * inspection list before the report behind it does, so this is the usual
+   * state of exactly the inspections the freshness check turns up. */
+  if (!report.date && !violations.length) {
+    return `<p class="detail-loading">The state hasn't published this visit's findings yet —
+      only the score. They usually follow within a few days.</p>`;
+  }
   if (!violations.length) {
     return `<p class="clean-flag">No violations recorded on this visit.</p>` + formLink(report);
   }
@@ -2916,6 +3310,14 @@ el.sheet.addEventListener("click", (e) => {
     closeSheet();
     return;
   }
+  // "Fire it off now", for somebody who has a reason to think there is
+  // something there -- a sign in the window, a score that is a year old.
+  // Bypasses the once-a-day rule; the endpoint still refuses to ask the
+  // health department twice inside two minutes.
+  if (e.target.closest("[data-recheck]")) {
+    if (state.open) checkPlace(state.open, { manual: true });
+    return;
+  }
   const row = e.target.closest(".insp-row");
   if (row) {
     toggleDetail(Number(row.dataset.insp));
@@ -2970,6 +3372,12 @@ new IntersectionObserver((entries) => {
 /* ------------------------------------------------------------------ go --- */
 
 applyShareState();
+
+// Anything found live and long since published, or simply old, goes before the
+// first place is drawn -- so a stale row can never be merged into a payload
+// that has moved past it.
+pruneLive();
+writeJSON(KEY.live, state.live);
 
 document.body.dataset.view = state.pane;
 if (state.home) setLocateState("on", state.home.label || "Near you");

@@ -743,6 +743,61 @@ main { padding: 0 14px; }
 .insp-date { font-size: 14px; font-weight: 520; }
 .insp-hint { color: var(--ink-muted); font-size: 12px; }
 
+/* How current this is.
+ *
+ * One grey line in the ordinary case -- same weight as the chart's caption,
+ * because "checked an hour ago, nothing new" is reassurance and reassurance
+ * should not shout. It only gains a background when there is something in it
+ * the published data does not have, which is the one state worth a box. */
+.live-note {
+  margin: 0 0 8px;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.live-note.is-found,
+.live-note.is-unsure {
+  padding: 9px 11px;
+  border-radius: 10px;
+  color: var(--ink-2);
+}
+.live-note.is-found {
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+.live-note.is-found b { font-weight: 640; }
+.live-note.is-unsure { background: var(--wash); }
+.live-note .linkish { font-size: 12.5px; }
+
+/* The checking state. A dot that pulses rather than a spinner that rotates:
+   it is one request, usually answered before this is read, and a spinner at
+   the top of a sheet reads as the sheet still loading. */
+.live-note.is-busy::before {
+  content: "";
+  display: inline-block;
+  width: 7px; height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: live-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: .25; }
+  50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-note.is-busy::before { animation: none; opacity: .7; }
+}
+
+/* An inspection this device found ahead of the published dataset. */
+.insp-row.is-live {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-wash);
+}
+.insp-row.is-live .insp-hint:last-child { color: var(--accent); font-weight: 600; }
+
 .detail { padding: 2px 4px 12px; }
 .detail-loading { color: var(--ink-muted); font-size: 13px; padding: 8px 4px; }
 
@@ -785,6 +840,9 @@ main { padding: 0 14px; }
 
 .clean-flag { color: var(--ink-2); font-size: 13px; padding: 6px 2px; }
 .form-link { display: inline-block; margin-top: 10px; font-size: 13px; }
+/* The link out to the source's own record of the place. Sits under the whole
+   inspection list, where the per-inspection form links sit inside one. */
+.state-link { margin-top: 14px; }
 
 /* alerts */
 .alerts {
