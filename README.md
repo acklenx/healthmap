@@ -21,6 +21,7 @@ GitHub Actions (nightly)          Cloudflare Pages (free)
 │  · geocode addresses │          │  vendor/      Leaflet     │
 │  · diff vs. last run │  notify  │ functions/ Pages Functions│
 └──────────────────────┘ ───────► │  /api/report  live proxy  │
+                                  │  /api/place   live check  │
                                   │  /api/notify  push alerts │
                                   └───────────────────────────┘
                                              │ tiles
@@ -81,6 +82,7 @@ a *past* inspection never changes at all. The caching is aggressive to match:
 | `places.json?v=<stamp>` | cached forever by the service worker | the URL only changes when the crawler publishes new data |
 | `version.json` | never cached, checked at most every 6h | a few bytes; the freshness probe |
 | `/api/report` | `max-age=1y, immutable`, edge + service worker | a completed inspection is a historical fact |
+| `/api/place` | `max-age=1h`, edge only | a claim about *now*, not about the past |
 | `*?cache-id=<hash>` | `immutable`, a year | a stamped URL's bytes never change |
 | app shell | cache-first, refreshed in background | instant launch, works offline |
 | map tiles | cache-first, capped at 900 | a tile is a picture of a place, and places don't move |
@@ -112,6 +114,65 @@ the app open.
 
 Opening the app costs one small `version.json` request on a cold start, and
 nothing at all if it was checked recently.
+
+### Asking about one restaurant
+
+Everything above is a nightly snapshot, which is the right shape for
+thirty-five thousand places and the wrong shape for the one place somebody is
+standing outside. A score published this morning is a day old by dinner, and
+after a failed run it is older than that with nothing on screen saying so.
+
+So **opening a restaurant checks that restaurant.** `/api/place` asks the
+state's own search whether anything has been inspected since the inspection
+being shown; if something has, it lands in the sheet, the chart, the badge in
+the list and the sort order, marked as having come from the source rather than
+from the refresh. Once a day per restaurant — the dataset's resolution is a day
+— and on demand from **Check again**, for somebody who has a reason to think
+there is something there.
+
+The source has no per-establishment page, so this drives the same date-range
+search the crawler does, narrowed to one establishment name. **The date window
+is what makes it affordable.** "Anything since the inspection I already have?"
+matches nothing at all for almost every restaurant, and a search that matches
+nothing is one request and an empty result set. Only a name common enough to
+fill a page needs a second one, and at three pages the endpoint stops and says
+it could not tell rather than walking a health department's search results.
+
+| | |
+|---|---|
+| the ordinary answer | 1 upstream request, 0 rows |
+| a chain name, 3-month window | 2 requests — 24 rows over 2 pages |
+| cached at the edge | an hour, so a street full of people costs one request |
+| `fresh=1` | refused within 2 minutes of an answer just given |
+
+What comes back is kept **apart from the payload** rather than merged into it.
+Every place carries what the refresh published — `latest0`, `previous0`,
+`historyCount0`, `risk0` — alongside what the app is showing, and the second is
+recomputed from the first plus whatever this device has found, every time. That
+is what makes the merge safe to redo when the history shard lands or another
+check runs, and it makes catching up free: the night the crawl publishes that
+inspection, the found row is no longer newer than the published one, so it is
+dropped and nothing has to be unwound. Findings persist for 30 days or 300
+places, whichever comes first.
+
+The risk-factor count goes to *unknown* while a found inspection is on top.
+Nobody has counted that visit's violations yet, and unknown is not none.
+
+Two things it is careful about. A name search cannot always single a restaurant
+out — two hundred Subways share theirs — and when it cannot, the app says it
+could not tell rather than reporting a clean "nothing new" it has not earned.
+And a score reaches the state's inspection list before the report behind it
+does, so a brand-new inspection usually has no findings published yet: that
+comes back as a page with no date, no grade and no form link, which is not the
+same as a visit with nothing on it and is no longer rendered as one.
+
+**Every inspection on the state's site** links out to the source's own record
+of a place, which only the per-inspection form link did before. There is no
+per-establishment page to link to, so it is a search — by establishment name or
+by street address, whichever actually singles this restaurant out. Name alone
+lands on exactly one restaurant 78% of the time and address alone 76%, but
+picking the better of the two per place lands on exactly one 95% of the time;
+when neither does, the line under the link says what else is in there.
 
 ### Locating things
 
@@ -322,8 +383,10 @@ python3 crawler/crawl.py --since-days 45     # or --full for everything on recor
 python3 scripts/dev_server.py                # http://localhost:8110
 ```
 
-The dev server serves the static app and implements `/api/report` locally, so
-you can click all the way through to a report without deploying.
+The dev server serves the static app and implements `/api/report` and
+`/api/place` locally against the live DPH site, so you can click all the way
+through to a report — and watch a freshness check really ask — without
+deploying anything.
 
 The crawler needs no dependencies — it is stdlib-only Python 3, on purpose, so
 CI has nothing to install and nothing to break.
@@ -336,7 +399,28 @@ web/public/          the app itself
 web/public/vendor/   Leaflet 1.9.4, vendored (no CDN, no build step)
 web/functions/api/   Cloudflare Pages Functions
 scripts/             dev server, icon generation, VAPID keygen
+tests/               the parser tests and their fixtures
 ```
+
+### Testing the parsers
+
+The source's markup is the only contract this project has with it, and **two
+parsers read it**: `crawler/source.py` nightly in GitHub Actions, and
+`web/functions/api/*.js` at the edge in a Cloudflare worker. Neither can call
+the other, so they can quietly disagree — the crawl keeps publishing, the
+endpoints keep answering, and only the numbers differ.
+
+```bash
+python3 tests/test_parsers.py        # runs in CI; no dependencies
+python3 scripts/make_fixtures.py     # refetch the fixtures when the site changes
+```
+
+Six real pages are parsed by both, and must match field for field. They are
+stored with their `<script>` bodies replaced by a decoy shaped like the markup
+each parser hunts for — a three-cell violation row, an establishment inspected
+in 2099 — because the page's 98 KB of inline JavaScript is a date picker that
+writes markup with `document.write()`. That decoy is what caught `parse_listing`
+reading script content, which it had done since it was written.
 
 ## Deploying to Cloudflare
 

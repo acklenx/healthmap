@@ -11,9 +11,9 @@ name: Checks
 on:
   push:
     branches: [main]
-    paths: ["web/**", "scripts/**", "crawler/**"]
+    paths: ["web/**", "scripts/**", "crawler/**", "tests/**"]
   pull_request:
-    paths: ["web/**", "scripts/**", "crawler/**"]
+    paths: ["web/**", "scripts/**", "crawler/**", "tests/**"]
 
 jobs:
   check:
@@ -34,6 +34,13 @@ jobs:
       # county in the state, offline, on every push.
       - name: Every Georgia county fits the coordinate bounds
         run: python3 scripts/preflight.py --counties all --offline
+
+      # Two parsers read the same third-party HTML -- one in Python for the
+      # nightly crawl, one in JavaScript at the edge -- and nothing else
+      # would notice them drifting apart. Fixtures are real pages, committed,
+      # so this needs no network and no dependencies.
+      - name: Both parsers agree about the same pages
+        run: python3 tests/test_parsers.py
 
       - name: JavaScript parses
         run: |

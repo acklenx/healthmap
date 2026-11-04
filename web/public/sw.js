@@ -1,6 +1,6 @@
 /* Service worker — the aggressive-caching half of the app.
  *
- * Four cache policies, chosen by how mutable the thing actually is:
+ * Five cache policies, chosen by how mutable the thing actually is:
  *
  *   shell     App code, Leaflet included. Versioned by SHELL_VERSION; replaced
  *             on activate.
@@ -16,10 +16,13 @@
  *             one is bounded: panning can pull in tiles forever.
  *
  * /version.json is deliberately never cached: it is the freshness probe, a
- * few bytes, and caching it would defeat the entire scheme.
+ * few bytes, and caching it would defeat the entire scheme. Neither is any
+ * other API route -- /api/place asks whether one restaurant has been
+ * inspected since yesterday, which is not a question with a cacheable
+ * answer -- and /api/report is the single exception, above.
  */
 
-const SHELL_VERSION = "de839e7d";
+const SHELL_VERSION = "6bbe7ad2";
 const SHELL = `shell-${SHELL_VERSION}`;
 const DATA = "data-v1";
 const HISTORY = "history-v1";
@@ -32,12 +35,12 @@ const TILE_LIMIT = 900;      // roughly a couple of towns' worth, at a few kB ea
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?cache-id=de839e7d",
-  "/app.js?cache-id=de839e7d",
+  "/styles.css?cache-id=6bbe7ad2",
+  "/app.js?cache-id=6bbe7ad2",
   // Loaded on demand when something is shared, precached for the same reason
   // Leaflet is: the moment you want it is not a good moment to need the network.
-  "/qr.js?cache-id=de839e7d",
-  "/manifest.webmanifest?cache-id=de839e7d",
+  "/qr.js?cache-id=6bbe7ad2",
+  "/manifest.webmanifest?cache-id=6bbe7ad2",
   // Leaflet is precached rather than lazily cached: it is only ever fetched
   // when a map is first opened, and that is exactly the moment you are least
   // likely to have signal to spare.
