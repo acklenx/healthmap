@@ -90,14 +90,26 @@ def _stamp(d):
     return d.strftime("%m/%d/%Y") + " 00:00 AM"
 
 
-def search_url(county, start=1, since=None, until=None, food_only=True):
+def search_url(county, start=1, since=None, until=None, food_only=True,
+               name=None, use_date=True):
+    """A results URL for the public search form.
+
+    `name` narrows it to one establishment name, which is a substring match --
+    "SUBWAY" finds every Subway, "SUBWAY #63473" finds the one. That is how a
+    single restaurant is looked up: the site has no per-establishment page, so
+    the only way to ask about one is to ask about its name and read the row.
+
+    `use_date=False` drops the window and returns the whole history. The
+    hidden sd/ed fields are sent either way, exactly as the form sends them;
+    the site ignores them when useDate is NO.
+    """
     params = {
         "1": "1",
         "f": "s",
-        "r": "ANY",
-        "s": "",
+        "r": "name" if name else "ANY",
+        "s": name or "",
         "inspectionType": "Food" if food_only else "",
-        "useDate": "YES",
+        "useDate": "YES" if use_date else "NO",
         "sd": _stamp(since or date(2010, 1, 1)),
         "ed": _stamp(until or date.today()),
         "county": county,
@@ -157,6 +169,15 @@ def parse_listing(page, county):
 
     An establishment can straddle a page boundary, so callers merge by `id`.
     """
+    # Only the results are searched for results. The reusable search form is
+    # appended below them, and 98 KB of the page is inline JavaScript -- a
+    # date picker that writes markup with document.write(). Neither can
+    # contain an establishment, and a phantom one would be geocoded and
+    # published, so neither is read. parse_report() cuts the same two things
+    # for the same reason.
+    cut = page.find("Establishment Search")
+    page = _SCRIPT_RE.sub(" ", page[:cut] if cut > 0 else page)
+
     out = []
     blocks = list(_BLOCK_RE.finditer(page))
     for n, m in enumerate(blocks):

@@ -11,10 +11,12 @@ deploying anything.
 
 import argparse
 import json
+import math
 import os
 import re
 import sys
 import threading
+from datetime import date, datetime, timedelta, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,7 +25,13 @@ sys.path.insert(0, os.path.join(ROOT, "crawler"))
 
 import source  # noqa: E402
 
-COUNTIES = {"Cobb", "Cherokee", "Fulton"}
+# Validated by shape, the way functions/api/*.js validate it: the county is a
+# filter on the upstream form, and the list of 159 lives in crawl.py.
+COUNTY_RE = re.compile(r"[A-Za-z][A-Za-z'. -]{1,22}")
+# Mirrors functions/api/place.js.
+PLACE_PAGE_SIZE = 20
+PLACE_MAX_PAGES = 3
+
 _report_cache = {}
 _lock = threading.Lock()
 
@@ -48,6 +56,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/report"):
             return self._report()
+        if self.path.startswith("/api/place"):
+            return self._place()
         if self.path.startswith("/api/geocode"):
             return self._geocode()
         if self.path.startswith("/api/vapid"):
@@ -68,7 +78,7 @@ class Handler(SimpleHTTPRequestHandler):
         insp = (q.get("insp") or [""])[0]
         county = (q.get("county") or [""])[0]
         if not re.fullmatch(r"\d{1,12}", eid) or not re.fullmatch(r"\d{1,12}", insp) \
-                or county not in COUNTIES:
+                or not COUNTY_RE.fullmatch(county):
             return self._json({"error": "bad request"}, 400)
 
         key = (eid, insp, county)
@@ -87,6 +97,72 @@ class Handler(SimpleHTTPRequestHandler):
         with _lock:
             _report_cache[key] = report
         return self._json(report, cache="public, max-age=31536000, immutable")
+
+    def _place(self):
+        """Mirrors functions/api/place.js -- has this one place been inspected?
+
+        Same search, same page cap, same shape of answer, so the freshness
+        check can be exercised against the live site before it is deployed.
+        There is no edge cache here, so a dev reload really does ask again.
+        """
+        from urllib.parse import parse_qs, urlparse
+
+        q = parse_qs(urlparse(self.path).query)
+        eid = (q.get("id") or [""])[0]
+        county = (q.get("county") or [""])[0]
+        name = (q.get("name") or [""])[0].strip()
+        since = (q.get("since") or [""])[0]
+        if not re.fullmatch(r"\d{1,12}", eid) or not COUNTY_RE.fullmatch(county) \
+                or not name or len(name) > 80 or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", since):
+            return self._json({"error": "bad request"}, 400)
+        try:
+            start = datetime.strptime(since, "%Y-%m-%d").date()
+        except ValueError:
+            return self._json({"error": "bad request"}, 400)
+        start = min(max(start, date.today() - timedelta(days=1095)), date.today())
+
+        answer = {"id": int(eid), "county": county, "since": start.isoformat()}
+        seen, listed_as, rows, pages, hit = {}, None, 0, 0, False
+        until = date.today() + timedelta(days=1)
+        try:
+            page = source.fetch(source.search_url(
+                county, since=start, until=until, name=name))
+            rows = source.result_count(page)
+            pages = math.ceil(rows / PLACE_PAGE_SIZE) if rows else 0
+            for n in range(1, min(pages, PLACE_MAX_PAGES) + 1):
+                if n > 1:
+                    page = source.fetch(source.search_url(
+                        county, start=(n - 1) * PLACE_PAGE_SIZE + 1,
+                        since=start, until=until, name=name))
+                blocks = source.parse_listing(page, county)
+                mine = [b for b in blocks if b["id"] == int(eid)]
+                for block in mine:
+                    hit = True
+                    listed_as = block["name"] or listed_as
+                    for insp in block["inspections"]:
+                        seen[insp["insp_id"]] = {
+                            "date": insp["date"], "score": insp["score"],
+                            "inspId": insp["insp_id"],
+                        }
+                # Rows past the twentieth continue on the next page, so being
+                # the last block on one is not the same as being complete.
+                straddles = bool(mine) and blocks[-1]["id"] == int(eid)
+                if hit and not straddles:
+                    break
+        except source.FetchError as exc:
+            return self._json({"error": "upstream: %s" % exc}, 502)
+
+        answer.update({
+            "checked": datetime.now(timezone.utc).isoformat(),
+            "rows": rows,
+            "pages": pages,
+            "partial": not hit and pages > PLACE_MAX_PAGES,
+            "found": hit,
+            "inspections": sorted(seen.values(), key=lambda i: i["date"], reverse=True),
+        })
+        if listed_as:
+            answer["listedAs"] = listed_as
+        return self._json(answer, cache="public, max-age=3600")
 
     def _geocode(self):
         """Mirrors functions/api/geocode.js — one-line address lookup."""
@@ -141,7 +217,7 @@ def main():
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     print("Score dev server -> http://localhost:%d" % args.port)
-    print("Serving %s (api/report proxies the live DPH site)" % PUBLIC)
+    print("Serving %s (api/report and api/place proxy the live DPH site)" % PUBLIC)
     server.serve_forever()
 
 

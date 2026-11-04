@@ -10,7 +10,15 @@
  */
 
 const UPSTREAM = "https://ga.healthinspections.us/georgia/";
-const COUNTIES = new Set(["Cobb", "Cherokee", "Fulton"]);
+/* Georgia county names: "Cobb", "Ben Hill", "DeKalb", "Jeff Davis".
+ *
+ * This was a set of the three counties the crawl started with, and it stayed
+ * that way when the dataset went statewide -- so every report in the other 156
+ * counties answered "bad request", which looks exactly like an inspection that
+ * has no report. Shape rather than a list, because the list has to live in
+ * crawl.py and a copy here is a second thing to remember. The value is a
+ * filter on the upstream form, not a path, and it is encoded below. */
+const COUNTY_RE = /^[A-Za-z][A-Za-z'. -]{1,22}$/;
 const YEAR = 31536000;
 
 export async function onRequestGet({ request, waitUntil }) {
@@ -20,7 +28,8 @@ export async function onRequestGet({ request, waitUntil }) {
   const county = url.searchParams.get("county");
 
   // Validate strictly: these values are interpolated into an upstream URL.
-  if (!/^\d{1,12}$/.test(id || "") || !/^\d{1,12}$/.test(insp || "") || !COUNTIES.has(county)) {
+  if (!/^\d{1,12}$/.test(id || "") || !/^\d{1,12}$/.test(insp || "") ||
+      !COUNTY_RE.test(county || "")) {
     return json({ error: "bad request" }, 400, "no-store");
   }
 
