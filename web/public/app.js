@@ -40,7 +40,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "bf7e78a6", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "937a1dd8", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -140,6 +140,7 @@ const state = {
   // reload, because a restaurant that was just inspected should not go back
   // to looking stale when the app is reopened.
   live: readJSON(KEY.live, {}) || {},
+  shared: new Map(),       // place id -> [date, score, inspId] rows anyone found (/api/found)
   open: null,
   pane: "list",      // which pane a phone is showing; both are shown from 980px
 };
@@ -492,7 +493,7 @@ async function ingestCounty(county, stamp) {
       risk: p.rf ?? null,
       liveIds: null,
     });
-    if (state.live[p.i]) applyLive(state.places[state.places.length - 1]);
+    if (state.live[p.i] || state.shared.has(p.i)) applyLive(state.places[state.places.length - 1]);
   }
   syncCoverage();
 }
@@ -690,7 +691,10 @@ function dueForCheck(p) {
 
 /** Fold what this device has found into what the payload published. */
 function applyLive(p) {
-  const rows = state.live[p.id]?.add || [];
+  // This device's own findings, and everybody else's (see loadShared). The
+  // same inspection can be in both; it is one inspection.
+  const rows = [...(state.live[p.id]?.add || []), ...(state.shared.get(p.id) || [])]
+    .filter((row, i, all) => all.findIndex((r) => r[2] === row[2]) === i);
   // Only rows still ahead of the payload count. The rest have been published
   // since -- the shard has them now, or a new generation does -- so dropping
   // them here is the whole of catching up: nothing has to be unwound.
@@ -710,6 +714,44 @@ function applyLive(p) {
   if (Array.isArray(p.history0)) {
     p.history = extra.length ? [...extra, ...p.history0] : p.history0;
   }
+}
+
+/* What everybody else's visits have found.
+ *
+ * Opening a restaurant asks the state's site about it, and /api/place keeps
+ * whatever newer inspection that turns up, for everyone. Without this, a score
+ * corrected by one visitor stayed wrong on every other phone until the nightly
+ * crawl -- including the phone of the next person standing outside it. Asked
+ * once a launch; the rows are folded in exactly like this device's own. */
+async function loadShared() {
+  if (!navigator.onLine) return;
+  let rows;
+  try {
+    const res = await fetch("/api/found");
+    if (!res.ok) return;
+    ({ rows } = await res.json());
+  } catch {
+    return;                          // the nightly data is still right, just older
+  }
+  if (!Array.isArray(rows) || !rows.length) return;
+  state.shared.clear();
+  for (const row of rows) {
+    if (!Array.isArray(row) || row.length !== 4) continue;
+    const [id, date, score, inspId] = row;
+    if (!Number.isInteger(id) || !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+        !Number.isInteger(score) || !Number.isInteger(inspId)) continue;
+    const list = state.shared.get(id) || [];
+    list.push([date, score, inspId]);
+    state.shared.set(id, list);
+  }
+  let changed = false;
+  for (const p of state.places) {
+    if (!state.shared.has(p.id)) continue;
+    const before = p.latest?.inspId;
+    applyLive(p);
+    if (p.latest?.inspId !== before) changed = true;
+  }
+  if (changed) render();
 }
 
 /* Keep the store small and keep it honest.
@@ -3587,6 +3629,7 @@ syncGradeChips();
 syncFilterDot();
 syncSearchDot();
 
+loadShared();
 loadData().then(() => {
   // Wide screens show both panes at once, so the map is built as soon as there
   // is something to put on it rather than waiting for a toggle that isn't there.

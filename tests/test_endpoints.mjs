@@ -14,6 +14,8 @@
  *     with, so inspections in the other 156 answered "bad request".
  *   - a search page that reports rows but parses into nothing answered a
  *     confident "nothing new" rather than admitting it could not read it.
+ *   - an inspection found live updated the score only for whoever opened that
+ *     restaurant; everybody else waited for the nightly crawl.
  *
  * Modules are loaded as source rather than imported, for the reason given in
  * tests/parsers.mjs: they are ES modules named .js in a tree with no
@@ -74,15 +76,42 @@ function stubFetch(reply) {
   return calls;
 }
 
-async function load(path) {
-  const src = read(path);
-  return import("data:text/javascript;base64," + Buffer.from(src).toString("base64"));
+/** A module as a data: URL, with its own relative imports inlined the same
+ *  way -- a data: URL has no directory for "./_found.js" to be relative to. */
+function moduleUrl(url) {
+  const src = readFileSync(url, "utf8").replace(
+    /from\s+"(\.\/[^"]+)"/g, (_, rel) => `from "${moduleUrl(new URL(rel, url))}"`);
+  return "data:text/javascript;base64," + Buffer.from(src).toString("base64");
 }
 
-const call = async (mod, url) => {
+async function load(path) {
+  return import(moduleUrl(new URL(path, HERE)));
+}
+
+/** D1, as much of it as these handlers use, over node's own SQLite and the
+ *  real schema -- so the SQL is tested, not just that it was sent. */
+async function stubD1() {
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(":memory:");
+  db.exec(read("../web/schema.sql"));
+  const statement = (sql, args = []) => ({
+    bind: (...a) => statement(sql, a),
+    run: async () => { db.prepare(sql).run(...args); return { success: true }; },
+    all: async () => ({ results: db.prepare(sql).all(...args) }),
+    first: async () => db.prepare(sql).get(...args) ?? null,
+  });
+  return {
+    raw: db,
+    prepare: (sql) => statement(sql),
+    batch: async (list) => { for (const st of list) await st.run(); return []; },
+  };
+}
+
+const call = async (mod, url, env = {}) => {
   const waits = [];
   const res = await mod.onRequestGet({
     request: new Request(url),
+    env,
     waitUntil: (p) => waits.push(p),
   });
   await Promise.all(waits);          // so cache writes land before the next call
@@ -91,6 +120,8 @@ const call = async (mod, url) => {
 
 const place = await load("../web/functions/api/place.js");
 const report = await load("../web/functions/api/report.js");
+const found = await load("../web/functions/api/found.js");
+const foundLib = await load("../web/functions/api/_found.js");
 
 const ORIGIN = "https://example.test";
 const placeUrl = (q) => `${ORIGIN}/api/place?${new URLSearchParams(q)}`;
@@ -399,6 +430,67 @@ section("upstream failure is reported, not papered over");
   const r = await call(report, reportUrl({ id: "1", insp: "2", county: "Cobb" }));
   eq("/api/report says 502", r.status, 502);
   eq("and is not cached", r.headers.get("cache-control"), "no-store");
+}
+
+section("/api/found — one visit's finding is everyone's");
+
+{
+  // The fixture's newest inspection, moved to last week so it is news.
+  const recent = new Date(today.getTime() - 7 * 86400000);
+  const month = recent.toLocaleString("en-US", { month: "long", timeZone: "UTC" });
+  const shown = `${month} ${recent.getUTCDate()}, ${recent.getUTCFullYear()}`;
+  const page = fixture("search-single.html").replace("May 19, 2026", shown);
+
+  const DB = await stubD1();
+  stubCaches();
+  stubFetch(() => page);
+  await call(place, placeUrl({
+    id: "3161473", county: "Cobb", name: "Jerusalem Bakery", since: daysAgo(900),
+  }), { DB });
+  const stored = DB.raw.prepare("SELECT * FROM found").all();
+  eq("a check that finds a new inspection stores it", stored.length, 1);
+  eq("…only the recent one, not the history around it", stored[0]?.date, daysAgo(7));
+  eq("…against the place that was asked about", stored[0]?.place_id, 3161473);
+
+  stubCaches();
+  const res = await call(found, `${ORIGIN}/api/found`, { DB });
+  const body = await res.json();
+  eq("and /api/found hands it to everyone", JSON.stringify(body.rows),
+     JSON.stringify([[3161473, daysAgo(7), 100, 57530780]]));
+  eq("cached for five minutes", res.headers.get("cache-control"), "public, max-age=300");
+
+  // Asked again: the same inspection is one row, not two.
+  stubCaches();
+  await call(place, placeUrl({
+    id: "3161473", county: "Cobb", name: "Jerusalem Bakery", since: daysAgo(900),
+  }), { DB });
+  eq("finding it twice stores it once",
+     DB.raw.prepare("SELECT COUNT(*) AS n FROM found").get().n, 1);
+
+  // Nothing found: nothing written.
+  stubCaches();
+  stubFetch(() => fixture("search-empty.html"));
+  await call(place, placeUrl({ id: "9", county: "Cobb", name: "Nobody", since: daysAgo(30) }), { DB });
+  eq("an empty answer writes nothing",
+     DB.raw.prepare("SELECT COUNT(*) AS n FROM found").get().n, 1);
+
+  // Old enough that the crawl has long since caught up: pruned on the next write.
+  const later = Date.now() + (foundLib.FOUND_KEEP_DAYS + 1) * 86400000;
+  await foundLib.recordFound(DB, 1, [{ date: new Date(later).toISOString().slice(0, 10),
+                                       score: 90, inspId: 1 }], later);
+  eq("rows past the keep window are pruned",
+     DB.raw.prepare("SELECT COUNT(*) AS n FROM found WHERE place_id = 3161473").get().n, 0);
+
+  stubCaches();
+  const none = await call(found, `${ORIGIN}/api/found`, {});
+  eq("without a database it answers with nothing, not an error",
+     JSON.stringify(await none.json()), JSON.stringify({ rows: [] }));
+  stubCaches();
+  stubFetch(() => page);
+  const plain = await call(place, placeUrl({
+    id: "3161473", county: "Cobb", name: "Jerusalem Bakery", since: daysAgo(900),
+  }), {});
+  eq("and /api/place still answers", plain.status, 200);
 }
 
 console.log(failures

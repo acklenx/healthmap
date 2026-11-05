@@ -20,6 +20,8 @@
  * health department one request.
  */
 
+import { recordFound } from "./_found.js";
+
 const UPSTREAM = "https://ga.healthinspections.us/georgia/";
 
 // The listing paginates by inspection row, not by establishment: one place
@@ -46,7 +48,7 @@ const MAX_NAME = 80;
 // everybody, and anything older than this is the nightly crawl's job.
 const MAX_SINCE_DAYS = 1095;
 
-export async function onRequestGet({ request, waitUntil }) {
+export async function onRequestGet({ request, env, waitUntil }) {
   const url = new URL(request.url);
   const id = url.searchParams.get("id") || "";
   const county = url.searchParams.get("county") || "";
@@ -105,6 +107,10 @@ export async function onRequestGet({ request, waitUntil }) {
     `public, max-age=${HOUR}`,
   );
   waitUntil(cache.put(cacheKey, response.clone()));
+  // What was found here is news for everyone, not only for this caller: see
+  // /api/found. Only this establishment's own rows, read from the state's page
+  // by this function -- nothing the caller sent is stored.
+  if (result.found) waitUntil(recordFound(env?.DB, Number(id), result.inspections));
   return response;
 }
 

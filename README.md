@@ -565,7 +565,15 @@ It needs no secrets, but it does need write access to the repository: check
 **Settings → Actions → General → Workflow permissions** is set to *Read and
 write*, or the crawl succeeds and the `git push` at the end fails.
 
-**4. Optional — push alerts for saved places**
+**4. Optional — share live findings, and push alerts for saved places**
+
+Opening a restaurant checks the state's site for an inspection newer than the
+nightly data. With the D1 database bound, `/api/place` keeps what it finds and
+`/api/found` hands it to every visitor, so one person's check updates the
+score for everyone until the next crawl catches up. Without it each phone
+keeps only its own findings. Creating the database and applying
+`web/schema.sql` (the first three commands below) is all this needs; the VAPID
+keys and secrets after that are for push alerts only.
 
 Alerts are off by default. The D1 binding in `web/wrangler.toml` is commented
 out, and `/api/subscribe`, `/api/notify` and `/api/pending` return 503 while it

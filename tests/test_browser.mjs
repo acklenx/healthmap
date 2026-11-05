@@ -103,6 +103,7 @@ const detailLoaded = (page) => page.waitForFunction(() => {
 
 /* What the stubbed endpoints answer with, and what they were asked. */
 let placeAnswer = null;
+let foundAnswer = { rows: [] };
 let reportAnswer = { violations: [], date: "06/11/2026", grade: "A", form_url: null };
 const asked = [];
 
@@ -150,6 +151,11 @@ async function freshPage({ seed = {} } = {}) {
       return req.respond({ status: 200, contentType: "application/json",
                            headers: { "Cache-Control": "no-store" },
                            body: JSON.stringify(placeAnswer) });
+    }
+    if (url.includes("/api/found")) {
+      return req.respond({ status: 200, contentType: "application/json",
+                           headers: { "Cache-Control": "no-store" },
+                           body: JSON.stringify(foundAnswer) });
     }
     if (url.includes("/api/report")) {
       // Never let a test reach the health department.
@@ -499,6 +505,32 @@ section("panning the map loads what is there");
   ok("counties scrolled into view are loaded", !st.ghosts.includes("Oconee"),
      `ghosts: ${st.ghosts.join(", ") || "none"} — ${st.coverage.split(" · ")[0]}`);
   ok("and drawn as restaurants", st.pins.length > 0, `${st.pins.length} markers`);
+  await page.close();
+}
+
+section("an inspection somebody else found");
+
+{
+  // Olde Blind Dog is published at 90 on 2026-06-02; another visitor's check
+  // turned up a newer one.
+  foundAnswer = { rows: [[888182, "2026-10-30", 72, 99999999]] };
+  const page = await freshPage({ seed: fromRoswell });
+  await page.goto(BASE + "/", { waitUntil: "networkidle2", timeout: 40000 });
+  await waitForList(page);
+  await search(page, "olde blind dog");
+  const card = await firstCard(page);
+  ok("shows on this phone's list without opening it", card?.badge === "C72",
+     card ? `${card.badge}, ${card.age}` : "no card");
+  ok("and nothing was asked of the state's site to get it",
+     !asked.some((u) => u.includes("id=888182")), `${asked.length} checks`);
+  foundAnswer = { rows: [[888182, "2026-05-01", 60, 5]] };
+  await page.reload({ waitUntil: "networkidle2" });
+  await waitForList(page);
+  await search(page, "olde blind dog");
+  const stale = await firstCard(page);
+  ok("a finding older than the published data changes nothing",
+     stale?.badge === "A90", stale?.badge);
+  foundAnswer = { rows: [] };
   await page.close();
 }
 

@@ -13,12 +13,13 @@ name = "healthmap"
 pages_build_output_dir = "public"
 compatibility_date = "2026-01-01"
 
-# D1 holds push subscriptions and queued alerts. Nothing else is stored
-# server-side -- the inspection data itself ships as a static file.
+# D1 holds push subscriptions, queued alerts, and inspections found live
+# before the nightly crawl published them (/api/found shares those with every
+# visitor). The inspection data itself ships as a static file.
 #
-# Commented out because push alerts are opt-in and the app degrades cleanly
-# without them: /api/subscribe, /api/notify and /api/pending all check for the
-# binding and return 503 when it is absent. A deploy carrying a placeholder
+# Commented out because both are opt-in and the app degrades cleanly without
+# them: /api/subscribe, /api/notify and /api/pending return 503 when the
+# binding is absent, and /api/found answers with no rows. A deploy carrying a placeholder
 # database_id is rejected, so this stays off until the database really exists.
 #
 # To turn alerts on:

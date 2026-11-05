@@ -27,3 +27,18 @@ CREATE TABLE IF NOT EXISTS pending (
 );
 
 CREATE INDEX IF NOT EXISTS pending_endpoint ON pending (endpoint);
+
+-- Inspections /api/place found on the state's site before the nightly crawl
+-- published them. Written only by the server, from the page it fetched itself
+-- -- never from anything a client sends -- and served to every visitor by
+-- /api/found, so one person opening a restaurant updates it for everyone.
+-- Rows stop mattering the night the crawl catches up, and are pruned after
+-- FOUND_KEEP_DAYS (see functions/api/_found.js).
+CREATE TABLE IF NOT EXISTS found (
+  insp_id   INTEGER PRIMARY KEY,
+  place_id  INTEGER NOT NULL,
+  date      TEXT NOT NULL,
+  score     INTEGER NOT NULL,
+  found_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS found_by_time ON found (found_at);
