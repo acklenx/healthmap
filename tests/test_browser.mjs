@@ -441,6 +441,12 @@ async function search(page, text) {
   await search(page, "olde blind dog");
   st = await listState(page);
   ok("matching ignores case", st.first === "Olde Blind Dog", st.first || st.empty);
+  // A phone keyboard does not exist here, so this is checked by its cause:
+  // without it, Android slides the page up under the search box and the
+  // results at the top are off-screen while you type.
+  const vp = await page.$eval('meta[name="viewport"]', (m) => m.content);
+  ok("the keyboard shortens the page rather than covering the results",
+     /interactive-widget=resizes-content/.test(vp), vp);
   await page.close();
 }
 
