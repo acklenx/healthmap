@@ -40,7 +40,7 @@ const MAX_PINS = 280;                         // pins drawn at once (see syncPin
 /* Cache-busting ids, rewritten by scripts/stamp_assets.py. Grouped by what
  * changes together: editing a line of CSS should not re-download 192 KB of
  * Leaflet that has not moved since it was vendored. */
-const CACHE_ID = { app: "4badc198", vendor: "ff4e6fa7", icons: "2290448a" };
+const CACHE_ID = { app: "bf7e78a6", vendor: "ff4e6fa7", icons: "2290448a" };
 const bust = (path, bucket) => `${path}?cache-id=${CACHE_ID[bucket]}`;
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -131,6 +131,7 @@ const state = {
   riskOnly: false,
   sort: "dist",
   query: "",
+  frameResults: false,     // a new query the map has not been brought to yet
   shown: PAGE,
   view: [],
   favorites: new Set(readJSON(KEY.favs, [])),
@@ -369,6 +370,58 @@ async function loadEverything() {
   syncCoverage();
 }
 
+/* A search for somewhere rather than something.
+ *
+ * Typing "30677" or "Watkinsville" into the search box used to answer "No
+ * restaurants match" from Roswell, because only the counties near home are
+ * loaded -- while the map, one swipe away, showed hundreds of them. The place
+ * index already knows where every ZIP and city is and how many places it has,
+ * so fetch the counties around it until they are all here. Bounded, because a
+ * ZIP that straddles a county line is two shards, not the whole state. */
+const QUERY_COUNTIES = 4;
+const QUERY_MILES = 15;
+const queryLoads = new Set();
+
+async function loadForQuery(text) {
+  const q = text.trim().toLowerCase().replace(/,?\s*(ga|georgia)\s*$/, "").trim();
+  if (!q || !state.manifest || !unloadedCounties().length) return false;
+  const zip = /^\d{5}$/.test(q) ? q : null;
+  if (!zip && q.length < 3) return false;
+  if (queryLoads.has(q)) return false;
+
+  let index;
+  try { index = await loadColdIndex(); } catch { return false; }
+  const hit = zip ? index.zip(zip) : index.city(q);
+  if (!hit) return false;
+
+  const matches = zip
+    ? (p) => p.zip === zip
+    : (p) => p.city.toLowerCase() === q;
+  const have = () => state.places.reduce((n, p) => n + (matches(p) ? 1 : 0), 0);
+  if (have() >= hit.count) return false;
+
+  queryLoads.add(q);
+  const stamp = state.generated;
+  const order = state.manifest.counties
+    .map((c) => ({ c, d: distanceToBox(hit.lat, hit.lon, c.b),
+                   dc: distanceMiles(hit.lat, hit.lon, c.y, c.x) }))
+    .filter(({ d }) => d <= QUERY_MILES)
+    .sort((a, b) => a.d - b.d || a.dc - b.dc)
+    .slice(0, QUERY_COUNTIES);
+  let added = false;
+  for (const { c } of order) {
+    if (state.loaded.has(c.s)) continue;
+    try {
+      await addCounty(c, stamp);
+      added = true;
+    } catch { /* the next one may still have them */ }
+    if (have() >= hit.count) break;
+  }
+  queryLoads.delete(q);
+  syncCoverage();
+  return added;
+}
+
 /** Home moved far enough that other counties are now the near ones. */
 function reconsiderCoverage() {
   if (!state.manifest || !state.generated) return;
@@ -419,7 +472,7 @@ async function ingestCounty(county, stamp) {
       history: null,
       chain: p.ck || null,
       // Precomputed once so filtering/searching stays cheap across ~13k rows.
-      search: `${p.n} ${p.a} ${p.c}`.toLowerCase(),
+      search: `${p.n} ${p.a} ${p.c} ${p.z}`.toLowerCase(),
       /* Two sets of the same four facts: what the nightly payload published,
        * and what the app is showing.
        *
@@ -1027,6 +1080,37 @@ function syncSearchDot() {
   el.searchDot.hidden = !state.query.trim();
 }
 
+/* A new query has to be seen to have been answered.
+ *
+ * The list used to stay wherever it was scrolled to, so on a phone the matches
+ * could be sitting above the fold with nothing on screen saying so -- and the
+ * map stayed where it was, saying "Nothing in view matches" about a search
+ * that had in fact found the place, three miles off. Now the list goes back to
+ * its top, and the map goes to the matches if none are already in frame. */
+function queryChanged(text) {
+  state.query = text;
+  state.shown = PAGE;
+  state.frameResults = !!text.trim();
+  syncSearchDot();
+  render();
+  if (state.pane !== "map" || wideEnough.matches) window.scrollTo({ top: 0 });
+  loadForQuery(text).then((added) => {
+    if (added && state.query === text) render();
+  });
+}
+
+/** Bring the map to the search results, once per query, if it isn't there. */
+function frameResults() {
+  if (!state.frameResults || !mapReady || !el.paneMap.offsetWidth || !state.view.length) return;
+  state.frameResults = false;
+  const frame = map.getBounds();
+  if (state.view.some((p) => frame.contains([p.lat, p.lon]))) return;
+  // The view is sorted, so these are the nearest (or whichever sort is on).
+  const pts = state.view.slice(0, 25).map((p) => [p.lat, p.lon]);
+  if (pts.length === 1) map.setView(pts[0], Math.max(map.getZoom(), 15));
+  else map.fitBounds(L.latLngBounds(pts), { padding: [48, 48], maxZoom: 16 });
+}
+
 /* ---- shareable state ---------------------------------------------------- */
 
 /* A link that reopens what is on screen now.
@@ -1075,7 +1159,10 @@ function applyShareState() {
   if (["dist", "recent", "worst"].includes(by)) state.sort = by;
 
   const query = q.get("q");
-  if (query) { state.query = query; el.search.value = query; el.dockSearch.hidden = false; }
+  if (query) {
+    state.query = query; state.frameResults = true;
+    el.search.value = query; el.dockSearch.hidden = false;
+  }
 
   if (q.get("view") === "map") state.pendingView = "map";
   // ?p= comes from a shared link, ?place= from a push notification.
@@ -2046,6 +2133,7 @@ function render({ recompute = true } = {}) {
   }
   syncPaneLayout();  // a wide screen may only now have something to map
   syncPins();        // the map draws whatever the list just decided to show
+  frameResults();
 }
 
 /* ------------------------------------------------------------------ map --- */
@@ -2249,8 +2337,11 @@ function syncPins() {
   const keepCells = new Set();
   for (const [key, members] of groups) {
     keepCells.add(key);
+    // Same cell and same count is not the same cluster: a county landing can
+    // swap who is in it, and the tap zooms to the members it was built with.
+    const sig = `${members.length}:${members.reduce((t, m) => t + m.id, 0)}`;
     const existing = clusters.get(key);
-    if (existing && existing._n === members.length) continue;
+    if (existing && existing._sig === sig) continue;
     if (existing) pinLayer.removeLayer(existing);
 
     let lat = 0, lon = 0;
@@ -2260,7 +2351,7 @@ function syncPins() {
       title: `${members.length} places here — tap to zoom in`,
       keyboard: false,
     });
-    marker._n = members.length;
+    marker._sig = sig;
     // Zoom to what is inside rather than by a fixed step: one level is not
     // enough to break up a tight pile, and three overshoots a loose one.
     marker.on("click", () => {
@@ -2331,6 +2422,41 @@ function syncGhosts(bounds) {
     pinLayer.removeLayer(marker);
     ghosts.delete(slug);
   }
+}
+
+/* Scrolling the map somewhere should show what is there.
+ *
+ * Only the counties near home are fetched up front; the rest sat on the map as
+ * a hollow circle with a count in it -- "576" -- that only became restaurants
+ * if you happened to tap it. Panning to a place is asking to see it. Once the
+ * map is zoomed in far enough to be looking at a neighbourhood rather than the
+ * state, fetch whatever counties the frame overlaps. Zoomed further out the
+ * circles stay: they are the honest summary at that scale, and loading the
+ * state because somebody pinched out once would be a lot to send to a phone. */
+const VIEW_LOAD_ZOOM = 10;
+const VIEW_LOAD_MAX = 6;
+let viewLoadTimer = null;
+
+function loadInView() {
+  clearTimeout(viewLoadTimer);
+  viewLoadTimer = setTimeout(async () => {
+    if (!mapReady || map.getZoom() < VIEW_LOAD_ZOOM || !state.generated) return;
+    const b = map.getBounds();
+    const s = b.getSouth(), n = b.getNorth(), w = b.getWest(), e = b.getEast();
+    const c = b.getCenter();
+    const wanted = unloadedCounties()
+      .filter(({ b: [cs, cw, cn, ce] }) => cn >= s && cs <= n && ce >= w && cw <= e)
+      .sort((a, z) => distanceToBox(c.lat, c.lng, a.b) - distanceToBox(c.lat, c.lng, z.b))
+      .slice(0, VIEW_LOAD_MAX);
+    const stamp = state.generated;
+    for (const county of wanted) {
+      try {
+        await addCounty(county, stamp);
+        render();
+      } catch { /* its circle stays, and tapping it retries */ }
+    }
+    if (wanted.length) syncCoverage();
+  }, 250);
 }
 
 function setMapNote(inFrame, drawn, saved = 0) {
@@ -2481,13 +2607,15 @@ async function ensureMap() {
   else if (bounds) map.fitBounds(bounds, { padding: [24, 24] });
   else map.setView([33.95, -84.4], 10);            // the three counties, roughly
 
-  map.on("moveend", () => { syncPins(); syncSearchHere(); });
+  map.on("moveend", () => { syncPins(); syncSearchHere(); loadInView(); });
   mapReady = true;
 
   syncHomeMarker();
   syncGpsMarker();
   syncPins();
+  frameResults();
   syncSearchHere();
+  loadInView();
   return true;
 }
 
@@ -2504,7 +2632,13 @@ function setPane(pane) {
   document.body.dataset.view = pane;
   el.viewToggle.setAttribute("aria-pressed", pane === "map" ? "true" : "false");
   el.viewToggleLabel.textContent = pane === "map" ? "List" : "Map";
-  if (pane === "map") ensureMap();
+  if (pane === "map") {
+    ensureMap().then((ready) => {
+      if (!ready) return;
+      map.invalidateSize();          // it was display:none a moment ago
+      frameResults();
+    });
+  }
 }
 
 /* Build the map once there is something to put on it.
@@ -3256,10 +3390,7 @@ el.searchBtn.addEventListener("click", () =>
 );
 el.searchDone.addEventListener("click", () => {
   el.search.value = "";
-  state.query = "";
-  state.shown = PAGE;
-  syncSearchDot();
-  render();
+  queryChanged("");
   closeSearch();
 });
 
@@ -3313,12 +3444,7 @@ el.filterSheet.addEventListener("click", (e) => {
 let searchTimer;
 el.search.addEventListener("input", () => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    state.query = el.search.value;
-    state.shown = PAGE;
-    syncSearchDot();
-    render();
-  }, 120);
+  searchTimer = setTimeout(() => queryChanged(el.search.value), 120);
 });
 
 el.locate.addEventListener("click", () => {

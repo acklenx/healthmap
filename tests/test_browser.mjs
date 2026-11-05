@@ -22,6 +22,10 @@
  *     "No violations recorded on this visit."
  *   - an inspection found live had to survive a reload, and be re-checked at
  *     most once a day.
+ *   - from Roswell, a search for Olde Blind Dog found it but left the map
+ *     saying "Nothing in view matches" and the list scrolled past it; a search
+ *     for 30677 said "No restaurants match"; and panning the map to Oconee
+ *     County showed a circle reading "576" that never became restaurants.
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -391,6 +395,110 @@ section("when the check cannot answer");
      /couldn't be reached/i.test(st.note || ""), st.note);
   ok("none of which claims there is nothing new",
      !/nothing newer/i.test(st.note || ""), st.note);
+  await page.close();
+}
+
+section("a search answers where you can see it");
+
+const ROSWELL = { lat: 34.0393, lon: -84.3705, label: "30075", pinned: true, at: Date.now() };
+const fromRoswell = { "score.lastPosition": JSON.stringify(ROSWELL) };
+const listState = (page) => page.evaluate(() => ({
+  y: Math.round(scrollY),
+  cards: document.querySelectorAll("#list .card").length,
+  first: document.querySelector("#list .card .card-name")?.textContent.trim() || null,
+  empty: document.querySelector("#empty").hidden ? null
+    : document.querySelector("#empty").textContent.replace(/\s+/g, " ").trim(),
+  note: document.querySelector("#map-note").hidden ? ""
+    : document.querySelector("#map-note").textContent.trim(),
+  ghosts: [...document.querySelectorAll(".pin-ghost small")].map((g) => g.textContent),
+  pins: [...document.querySelectorAll("#map .leaflet-marker-icon[title]")].map((m) => m.title),
+  coverage: document.querySelector("#freshness").textContent,
+}));
+async function search(page, text) {
+  await page.evaluate(() => {
+    if (document.querySelector("#dock-search").hidden) document.querySelector("#search-btn").click();
+    document.querySelector("#search").value = "";
+  });
+  await page.type("#search", text);
+  await settle(600);
+}
+
+{
+  placeAnswer = { rows: 0, pages: 0, partial: false, found: false, inspections: [] };
+  const page = await freshPage({ seed: fromRoswell });
+  await page.goto(BASE + "/", { waitUntil: "networkidle2", timeout: 40000 });
+  await waitForList(page);
+  await page.evaluate(() => scrollTo(0, 2500));
+  await search(page, "Olde");
+  let st = await listState(page);
+  ok("a new query scrolls the list back to its top", st.y === 0, `scrollY ${st.y}`);
+  await search(page, "olde blind dog");
+  st = await listState(page);
+  ok("matching ignores case", st.first === "Olde Blind Dog", st.first || st.empty);
+  await page.close();
+}
+
+{
+  const page = await freshPage({ seed: fromRoswell });
+  await page.goto(BASE + "/?view=map", { waitUntil: "networkidle2", timeout: 40000 });
+  await page.waitForSelector("#map .leaflet-marker-icon", { timeout: 20000 });
+  await search(page, "OLDE BLIND DOG");
+  await page.waitForFunction(
+    () => [...document.querySelectorAll("#map .leaflet-marker-icon[title]")]
+      .some((m) => /^Olde Blind Dog/.test(m.title)), { timeout: 8000 }).catch(() => {});
+  const st = await listState(page);
+  ok("the map goes to a match that was out of frame",
+     st.pins.some((t) => /^Olde Blind Dog/.test(t)), st.note || `${st.pins.length} pins`);
+  ok("and does not say nothing matches", !/Nothing in view/.test(st.note), st.note);
+  await page.close();
+}
+
+section("a ZIP code outside the loaded counties");
+
+{
+  const page = await freshPage({ seed: fromRoswell });
+  await page.goto(BASE + "/", { waitUntil: "networkidle2", timeout: 40000 });
+  await waitForList(page);
+  await search(page, "30677");
+  await page.waitForFunction("document.querySelectorAll('#list .card').length > 0",
+                             { timeout: 15000 }).catch(() => {});
+  const st = await listState(page);
+  ok("searching 30677 from Roswell finds its restaurants", st.cards > 0,
+     st.empty || `${st.cards} cards`);
+  await search(page, "watkinsville");
+  const city = await listState(page);
+  ok("and so does its city", city.cards > 0, city.empty || `${city.cards} cards`);
+  await page.close();
+}
+
+section("panning the map loads what is there");
+
+{
+  const page = await freshPage({ seed: fromRoswell });
+  await page.setViewport({ width: 414, height: 800 });
+  await page.goto(BASE + "/?view=map", { waitUntil: "networkidle2", timeout: 40000 });
+  await page.waitForSelector("#map .leaflet-marker-icon", { timeout: 20000 });
+  for (let i = 0; i < 4; i++) {               // zoom 14 -> 10
+    await page.click(".leaflet-control-zoom-out");
+    await settle(350);
+  }
+  // East, toward Oconee County: two long drags of the map itself.
+  for (let i = 0; i < 2; i++) {
+    await page.mouse.move(380, 450);
+    await page.mouse.down();
+    await page.mouse.move(40, 470, { steps: 12 });
+    await page.mouse.up();
+    await settle(400);
+  }
+  const before = (await listState(page)).coverage;
+  await page.waitForFunction(
+    () => !/^1[01] counties|in 10 counties/.test(document.querySelector("#freshness").textContent) &&
+          ![...document.querySelectorAll(".pin-ghost small")].some((g) => g.textContent === "Oconee"),
+    { timeout: 20000 }).catch(() => {});
+  const st = await listState(page);
+  ok("counties scrolled into view are loaded", !st.ghosts.includes("Oconee"),
+     `ghosts: ${st.ghosts.join(", ") || "none"} — ${st.coverage.split(" · ")[0]}`);
+  ok("and drawn as restaurants", st.pins.length > 0, `${st.pins.length} markers`);
   await page.close();
 }
 
