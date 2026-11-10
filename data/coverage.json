@@ -27,12 +27,12 @@
   "Chatham": 1693,
   "Chattahoochee": 6,
   "Chattooga": 54,
-  "Cherokee": 716,
+  "Cherokee": 718,
   "Clarke": 593,
   "Clay": 13,
   "Clayton": 912,
   "Clinch": 25,
-  "Cobb": 2359,
+  "Cobb": 2362,
   "Coffee": 189,
   "Colquitt": 166,
   "Columbia": 478,
@@ -59,7 +59,7 @@
   "Floyd": 373,
   "Forsyth": 549,
   "Franklin": 109,
-  "Fulton": 6333,
+  "Fulton": 6358,
   "Gilmer": 128,
   "Glascock": 6,
   "Glynn": 545,
@@ -159,5 +159,5 @@
   "Wilkinson": 11,
   "Worth": 70
  },
- "generated": "2026-11-03T16:40:25+00:00"
+ "generated": "2026-11-10T16:51:55+00:00"
 }
